@@ -4,7 +4,9 @@ require_once __DIR__ . '/db.php';
 $result = null;
 $error = null;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hide_id'])) {
+    hideRecord((int) $_POST['hide_id']);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $surname = trim($_POST['surname'] ?? '');
     $weightKg = floatval($_POST['weight_kg'] ?? 0);
@@ -77,6 +79,7 @@ $records = getRecords();
                         <th>Height (cm)</th>
                         <th>BMI</th>
                         <th>Date</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -88,6 +91,12 @@ $records = getRecords();
                             <td><?= $rec['height_cm'] ?></td>
                             <td><?= $rec['bmi'] ?></td>
                             <td><?= $rec['created_at'] ?></td>
+                            <td>
+                                <form method="POST" style="margin:0">
+                                    <input type="hidden" name="hide_id" value="<?= $rec['id'] ?>">
+                                    <button type="submit" class="btn-hide">Hide</button>
+                                </form>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

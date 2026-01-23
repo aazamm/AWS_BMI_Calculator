@@ -94,6 +94,40 @@ th {
     font-weight: bold;
 }
 
+.btn-hide {
+    padding: 4px 10px;
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-size: 13px;
+    cursor: pointer;
+    width: auto;
+}
+
+.btn-hide:hover {
+    background: #c0392b;
+}
+
+.btn-unhide {
+    padding: 4px 10px;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-size: 13px;
+    cursor: pointer;
+    width: auto;
+}
+
+.btn-unhide:hover {
+    background: #1e8449;
+}
+
+tr.hidden-row {
+    opacity: 0.5;
+}
+
 .visitor-counter {
     margin-top: 30px;
     text-align: center;
