@@ -154,3 +154,21 @@ Saved on instance at `/root/db_credentials.txt`:
 - MariaDB 10.5 (for WordPress)
 - SQLite 3.40 (for BMI calculator)
 - WordPress (latest)
+
+---
+
+## 9. Push to GitHub
+
+```bash
+# Initialize git repo
+cd /Users/aaron/aazamm/bmi-calculator
+git init
+git add -A
+git commit -m "Initial commit: BMI Calculator with WordPress on AWS EC2"
+
+# Create GitHub repo and push (using GitHub CLI)
+gh auth status  # Verify logged in as aazamm
+gh repo create AWS_BMI_Calculator --public --source=. --remote=origin --push
+```
+
+**GitHub Repository**: https://github.com/aazamm/AWS_BMI_Calculator
