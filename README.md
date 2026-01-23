@@ -18,6 +18,8 @@ A standalone PHP web application that calculates Body Mass Index (BMI) and store
 | Database | SQLite 3 |
 | Web Server | Apache (httpd) with PHP-FPM |
 | CMS | WordPress (MariaDB 10.5) |
+| SSL/HTTPS | Cloudflare (Flexible mode) |
+| Domain | aaronzammit.com |
 | Infrastructure | AWS EC2 t3.micro, Amazon Linux 2023 |
 | Region | eu-central-1 (Frankfurt) |
 
@@ -86,10 +88,11 @@ php -S localhost:8000     # Start dev server
 aws ec2 create-key-pair --key-name bmi-calculator-key --query 'KeyMaterial' --output text > ~/.ssh/bmi-calculator-key.pem
 chmod 400 ~/.ssh/bmi-calculator-key.pem
 
-# 2. Create security group (SSH + HTTP)
+# 2. Create security group (SSH + HTTP + HTTPS)
 aws ec2 create-security-group --group-name bmi-calculator-sg --description "BMI Calculator SG" --vpc-id <your-vpc-id>
 aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 22 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 80 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 443 --cidr 0.0.0.0/0
 
 # 3. Launch EC2 instance (Amazon Linux 2023, t3.micro)
 aws ec2 run-instances \
@@ -120,8 +123,8 @@ The deployment script installs and configures:
 
 ### Live URLs
 
-- **BMI Calculator**: `http://<EC2-IP>/bmi/`
-- **WordPress**: `http://<EC2-IP>/`
+- **BMI Calculator**: https://aaronzammit.com/bmi/
+- **WordPress**: https://aaronzammit.com/
 
 ### SSH Access
 
@@ -129,12 +132,36 @@ The deployment script installs and configures:
 ssh -i ~/.ssh/bmi-calculator-key.pem ec2-user@<EC2-IP>
 ```
 
+## HTTPS / SSL Configuration
+
+HTTPS is handled via Cloudflare in **Flexible** mode:
+
+| Layer | Protocol | Certificate |
+|-------|----------|-------------|
+| User → Cloudflare | HTTPS | Cloudflare's Universal SSL |
+| Cloudflare → EC2 | HTTP | N/A (Flexible mode) |
+
+### Setup Steps
+
+1. **Cloudflare DNS**: Add A records for `@` and `www` pointing to the EC2 public IP, with proxy enabled (orange cloud)
+2. **Cloudflare SSL/TLS**: Set encryption mode to **Flexible**
+3. **WordPress config**: Added `X-Forwarded-Proto` detection in `wp-config.php` so WordPress recognises HTTPS
+4. **Apache config**: Added `/etc/httpd/conf.d/cloudflare.conf` to trust Cloudflare IP ranges for real visitor IPs
+5. **Security group**: Port 443 added for HTTPS
+
+### Optional Cloudflare Settings
+
+- **Always Use HTTPS** (SSL/TLS → Edge Certificates): Redirects all HTTP to HTTPS
+- **HSTS**: Enforces HTTPS in browsers
+- **Automatic HTTPS Rewrites**: Fixes mixed content issues
+
 ## Security Notes
 
 - Database credentials are stored on the instance at `/root/db_credentials.txt`
 - The SSH key is stored locally at `~/.ssh/bmi-calculator-key.pem`
-- Security group allows SSH and HTTP from all IPs (0.0.0.0/0) — restrict to your IP for production use
+- Security group allows SSH, HTTP, and HTTPS from all IPs (0.0.0.0/0) — restrict to your IP for production use
 - SQLite database file is created at runtime in `/var/www/html/bmi/bmi_data.db`
+- HTTPS is terminated at Cloudflare; traffic between Cloudflare and EC2 is over HTTP (Flexible mode)
 
 ## License
 
