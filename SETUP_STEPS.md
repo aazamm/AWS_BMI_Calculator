@@ -133,8 +133,9 @@ ssh -i ~/.ssh/bmi-calculator-key.pem ec2-user@54.93.223.221 "sudo systemctl rest
 | VPC | vpc-04c3e303f1975de6c |
 
 ### Live URLs
-- **BMI Calculator**: http://54.93.223.221/bmi/
-- **WordPress**: http://54.93.223.221/
+- **BMI Calculator**: https://aaronzammit.com/bmi/
+- **Admin Panel**: https://aaronzammit.com/bmi/admin.php
+- **WordPress**: https://aaronzammit.com/
 
 ### SSH Access
 ```bash
@@ -172,3 +173,105 @@ gh repo create AWS_BMI_Calculator --public --source=. --remote=origin --push
 ```
 
 **GitHub Repository**: https://github.com/aazamm/AWS_BMI_Calculator
+
+---
+
+## 10. HTTPS Setup via Cloudflare
+
+Domain `aaronzammit.com` is managed on Cloudflare.
+
+**Cloudflare DNS records (proxy enabled - orange cloud):**
+- A record: `@` → `54.93.223.221`
+- A record: `www` → `54.93.223.221`
+
+**Cloudflare SSL/TLS mode:** Flexible
+
+**WordPress HTTPS detection (added to wp-config.php on EC2):**
+```php
+/* Cloudflare HTTPS detection */
+if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $_SERVER['HTTPS'] = 'on';
+}
+```
+
+**Apache Cloudflare config (created /etc/httpd/conf.d/cloudflare.conf):**
+```bash
+ssh -i ~/.ssh/bmi-calculator-key.pem ec2-user@54.93.223.221 "sudo tee /etc/httpd/conf.d/cloudflare.conf > /dev/null <<'EOF'
+<IfModule mod_remoteip.c>
+    RemoteIPHeader X-Forwarded-For
+    RemoteIPTrustedProxy 173.245.48.0/20
+    RemoteIPTrustedProxy 103.21.244.0/22
+    RemoteIPTrustedProxy 103.22.200.0/22
+    RemoteIPTrustedProxy 103.31.4.0/22
+    RemoteIPTrustedProxy 141.101.64.0/18
+    RemoteIPTrustedProxy 108.162.192.0/18
+    RemoteIPTrustedProxy 190.93.240.0/20
+    RemoteIPTrustedProxy 188.114.96.0/20
+    RemoteIPTrustedProxy 197.234.240.0/22
+    RemoteIPTrustedProxy 198.41.128.0/17
+    RemoteIPTrustedProxy 162.158.0.0/15
+    RemoteIPTrustedProxy 104.16.0.0/13
+    RemoteIPTrustedProxy 104.24.0.0/14
+    RemoteIPTrustedProxy 172.64.0.0/13
+    RemoteIPTrustedProxy 131.0.72.0/22
+</IfModule>
+EOF"
+```
+
+**Added HTTPS port to security group:**
+```bash
+aws ec2 authorize-security-group-ingress --group-id sg-0415fab6c3b564196 --protocol tcp --port 443 --cidr 0.0.0.0/0
+```
+
+**Restarted Apache:**
+```bash
+ssh -i ~/.ssh/bmi-calculator-key.pem ec2-user@54.93.223.221 "sudo systemctl restart httpd"
+```
+
+---
+
+## 11. Added Visitor Counter
+
+Added a numeric visitor counter stored in SQLite (`visitor_counter` table). Increments on every page load and displays at the bottom of the BMI calculator page.
+
+---
+
+## 12. Added Hide Feature & Admin Panel
+
+**Hide feature on public page:**
+- Each BMI record has a "Hide" button
+- Clicking Hide sets `hidden = 1` in the database
+- Hidden records no longer appear on the public page
+
+**Admin panel (`admin.php`):**
+- Protected with HTTP Basic Authentication
+- Shows all records including hidden ones (greyed out)
+- Can hide/unhide any record
+- Default credentials: `admin` / `bmi2026!`
+
+**Redeployed updated files:**
+```bash
+scp -i ~/.ssh/bmi-calculator-key.pem index.php db.php style.css admin.php ec2-user@54.93.223.221:/tmp/bmi-calculator/
+ssh -i ~/.ssh/bmi-calculator-key.pem ec2-user@54.93.223.221 "sudo cp /tmp/bmi-calculator/index.php /tmp/bmi-calculator/db.php /tmp/bmi-calculator/style.css /tmp/bmi-calculator/admin.php /var/www/html/bmi/ && sudo chown apache:apache /var/www/html/bmi/*.php /var/www/html/bmi/*.css"
+```
+
+---
+
+## 13. Instance Management
+
+**Stop instance:**
+```bash
+aws ec2 stop-instances --instance-ids i-02c7b760e6ac58028
+```
+
+**Start instance:**
+```bash
+aws ec2 start-instances --instance-ids i-02c7b760e6ac58028
+```
+
+**Check instance status:**
+```bash
+aws ec2 describe-instances --instance-ids i-02c7b760e6ac58028 --query 'Reservations[0].Instances[0].{State:State.Name,IP:PublicIpAddress}' --output table
+```
+
+**Note:** The public IP may change when restarting the instance. If so, update the Cloudflare A records with the new IP.
