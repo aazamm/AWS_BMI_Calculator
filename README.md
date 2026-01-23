@@ -9,6 +9,9 @@ A standalone PHP web application that calculates Body Mass Index (BMI) and store
 - View all previous calculations in a table
 - BMI category classification (Underweight, Normal weight, Overweight, Obese)
 - Lightweight SQLite database (no external DB server needed for the calculator)
+- Visitor counter (tracks total page visits)
+- Soft-delete: hide records from public view while keeping them in the database
+- Admin panel with HTTP Basic Authentication to view and manage all records
 
 ## Tech Stack
 
@@ -28,6 +31,7 @@ A standalone PHP web application that calculates Body Mass Index (BMI) and store
 ```
 .
 ├── index.php          # Main application - form, BMI calculation, results display
+├── admin.php          # Admin panel - view all records, hide/unhide (password protected)
 ├── db.php             # Database layer - SQLite connection, CRUD operations
 ├── style.css          # Application styling
 ├── deploy.sh          # Automated deployment script for EC2
@@ -60,7 +64,15 @@ SQLite table `bmi_records`:
 | weight_kg | REAL | Weight in kilograms |
 | height_cm | REAL | Height in centimetres |
 | bmi | REAL | Calculated BMI value |
+| hidden | INTEGER | 0 = visible, 1 = hidden from public page |
 | created_at | DATETIME | Timestamp of record creation |
+
+SQLite table `visitor_counter`:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Always 1 (single row) |
+| count | INTEGER | Total page visits |
 
 ## Local Development
 
@@ -124,7 +136,24 @@ The deployment script installs and configures:
 ### Live URLs
 
 - **BMI Calculator**: https://aaronzammit.com/bmi/
+- **Admin Panel**: https://aaronzammit.com/bmi/admin.php
 - **WordPress**: https://aaronzammit.com/
+
+## Admin Panel
+
+The admin panel at `/bmi/admin.php` is protected with HTTP Basic Authentication.
+
+**Default credentials:**
+- Username: `admin`
+- Password: `bmi2026!`
+
+To change credentials, edit the `ADMIN_USER` and `ADMIN_PASS` constants at the top of `admin.php`.
+
+**Admin features:**
+- View all BMI records (including hidden ones)
+- Hidden records are displayed with reduced opacity
+- Hide or unhide any record with a single click
+- Records hidden from the public page remain in the database
 
 ### SSH Access
 
@@ -162,6 +191,7 @@ HTTPS is handled via Cloudflare in **Flexible** mode:
 - Security group allows SSH, HTTP, and HTTPS from all IPs (0.0.0.0/0) — restrict to your IP for production use
 - SQLite database file is created at runtime in `/var/www/html/bmi/bmi_data.db`
 - HTTPS is terminated at Cloudflare; traffic between Cloudflare and EC2 is over HTTP (Flexible mode)
+- Admin panel is protected with HTTP Basic Authentication — change the default credentials in production
 
 ## License
 
