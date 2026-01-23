@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$visitorCount = incrementVisitorCount();
 $records = getRecords();
 ?>
 <!DOCTYPE html>
@@ -92,6 +93,10 @@ $records = getRecords();
                 </tbody>
             </table>
         <?php endif; ?>
+
+        <div class="visitor-counter">
+            Visitors: <?= $visitorCount ?>
+        </div>
     </div>
 </body>
 </html>

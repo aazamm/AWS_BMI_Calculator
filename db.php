@@ -12,7 +12,20 @@ function getDB(): SQLite3 {
         bmi REAL NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )');
+    $db->exec('CREATE TABLE IF NOT EXISTS visitor_counter (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        count INTEGER NOT NULL DEFAULT 0
+    )');
+    $db->exec('INSERT OR IGNORE INTO visitor_counter (id, count) VALUES (1, 0)');
     return $db;
+}
+
+function incrementVisitorCount(): int {
+    $db = getDB();
+    $db->exec('UPDATE visitor_counter SET count = count + 1 WHERE id = 1');
+    $result = $db->querySingle('SELECT count FROM visitor_counter WHERE id = 1');
+    $db->close();
+    return (int) $result;
 }
 
 function saveRecord(string $name, string $surname, float $weightKg, float $heightCm): array {
