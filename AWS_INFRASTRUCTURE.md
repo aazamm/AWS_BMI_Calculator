@@ -3,19 +3,36 @@
 ## Architecture
 
 ```
-User → CloudFront (CDN/HTTPS) → ALB → EC2 (t3.micro)
-              ↓
-        aaronzammit.com
+User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
+              ↓                              ↓
+        aaronzammit.com              Google Analytics (G-3B3EDTZ0JT)
 ```
 
 ## Resources
 
-### EC2 Instance
-- **Instance ID:** `i-02c7b760e6ac58028`
-- **Type:** t3.micro
-- **Region:** eu-central-1
-- **Public IP:** 3.78.190.129
-- **Security Group:** `sg-0415fab6c3b564196` (bmi-calculator-sg)
+### Auto Scaling Group
+- **Name:** bmi-calculator-asg
+- **Min/Desired/Max:** 2 / 2 / 4
+- **Launch Template:** lt-00e9af6830a1fb15c (v3)
+- **AMI:** ami-08cd8dc3fa78b088d
+- **Instance Type:** t3.micro
+- **Availability Zones:** eu-central-1a, eu-central-1b, eu-central-1c
+- **Scaling Policies:** CPU > 70%, Memory > 70%
+- **Health Check:** ELB, 120s grace period
+
+### Launch Template
+- **ID:** lt-00e9af6830a1fb15c
+- **Version:** 3 (with Google Analytics)
+- **AMI:** ami-08cd8dc3fa78b088d
+- **IAM Profile:** CloudWatchAgentProfile
+- **Monitoring:** Detailed (1-minute)
+- **User Data:** CloudWatch Agent installation
+
+### Google Analytics
+- **Measurement ID:** G-3B3EDTZ0JT
+- **Property:** BMI Calculator
+- **Tracking:** Page views, demographics, traffic sources
+- **Dashboard:** https://analytics.google.com/
 
 ### ACM Certificate (us-east-1)
 - **ARN:** `arn:aws:acm:us-east-1:359345324847:certificate/df802f98-5faa-4328-a927-571382bd00e5`

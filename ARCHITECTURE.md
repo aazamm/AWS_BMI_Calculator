@@ -249,9 +249,10 @@
 | ALB | bmi-calculator-alb | 3 AZs, HTTP listener on port 80 |
 | Target Group | bmi-calculator-tg | HTTP:80, health check /bmi/, ELB health |
 | Auto Scaling Group | bmi-calculator-asg | Min: 2, Max: 4, CPU+Memory scaling |
-| Launch Template | lt-00e9af6830a1fb15c v2 | t3.micro, CloudWatch Agent, detailed monitoring |
-| AMI | ami-04f362ea12d5ad433 | Custom AMI with Apache+PHP+App |
+| Launch Template | lt-00e9af6830a1fb15c v3 | t3.micro, CloudWatch Agent, detailed monitoring |
+| AMI | ami-08cd8dc3fa78b088d | Custom AMI with Apache+PHP+App+GA |
 | IAM Role | CloudWatchAgentRole | CloudWatch Agent + SSM permissions |
+| Google Analytics | G-3B3EDTZ0JT | Traffic analytics and audience insights |
 
 ## Resiliency Features
 
@@ -275,6 +276,38 @@
 | Subnet 1b | 172.31.32.0/20 | eu-central-1b |
 | Subnet 1c | 172.31.0.0/20 | eu-central-1c |
 
+## Google Analytics
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              GOOGLE ANALYTICS 4                                  │
+│                                                                                  │
+│   Measurement ID:  G-3B3EDTZ0JT                                                 │
+│   Property:        BMI Calculator                                                │
+│   Data Stream:     Web (https://aaronzammit.com)                                │
+│                                                                                  │
+│   ┌─────────────────────────────────────────────────────────────────────────┐   │
+│   │                         TRACKED METRICS                                  │   │
+│   │                                                                          │   │
+│   │   👥 AUDIENCE                    📊 BEHAVIOR                            │   │
+│   │   • Demographics (age, gender)   • Page views                           │   │
+│   │   • Location (country, city)     • Session duration                     │   │
+│   │   • Language                     • Bounce rate                          │   │
+│   │   • Device type                  • Pages per session                    │   │
+│   │   • Browser/OS                   • User engagement                      │   │
+│   │                                                                          │   │
+│   │   🔗 ACQUISITION                 ⏱️ REAL-TIME                           │   │
+│   │   • Traffic sources              • Active users now                     │   │
+│   │   • Referrals                    • Current page views                   │   │
+│   │   • Direct/Organic/Social        • Live events                          │   │
+│   │   • Campaign tracking            • User locations                       │   │
+│   └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│   Dashboard: https://analytics.google.com/                                      │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
 ## Cost Estimate (Monthly)
 
 | Resource | Cost |
@@ -284,4 +317,5 @@
 | ALB | ~$16 + data |
 | CloudFront | Free tier (1TB) |
 | CloudWatch | ~$3 |
+| Google Analytics | Free |
 | **Total (baseline)** | **~$35** |

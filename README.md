@@ -1,6 +1,8 @@
 # AWS BMI Calculator
 
-A standalone PHP web application that calculates Body Mass Index (BMI) and stores user records in a SQLite database. Deployed alongside WordPress on an AWS EC2 instance running Amazon Linux 2023.
+A standalone PHP web application that calculates Body Mass Index (BMI) and stores user records in a SQLite database. Deployed on AWS with CloudFront CDN, Application Load Balancer, and Auto Scaling for high availability.
+
+**Live URL:** https://aaronzammit.com/bmi/
 
 ## Features
 
@@ -12,6 +14,7 @@ A standalone PHP web application that calculates Body Mass Index (BMI) and store
 - Visitor counter (tracks total page visits)
 - Soft-delete: hide records from public view while keeping them in the database
 - Admin panel with HTTP Basic Authentication to view and manage all records
+- **Google Analytics** integration for traffic and audience insights
 
 ## Tech Stack
 
@@ -20,11 +23,24 @@ A standalone PHP web application that calculates Body Mass Index (BMI) and store
 | Backend | PHP 8.4 |
 | Database | SQLite 3 |
 | Web Server | Apache (httpd) with PHP-FPM |
-| CMS | WordPress (MariaDB 10.5) |
-| SSL/HTTPS | Cloudflare (Flexible mode) |
+| CDN | AWS CloudFront |
+| Load Balancer | AWS Application Load Balancer |
+| Compute | AWS EC2 Auto Scaling (2-4 t3.micro) |
+| SSL/HTTPS | AWS ACM Certificate |
+| DNS | Cloudflare |
+| Analytics | Google Analytics 4 (G-3B3EDTZ0JT) |
+| Monitoring | AWS CloudWatch |
 | Domain | aaronzammit.com |
-| Infrastructure | AWS EC2 t3.micro, Amazon Linux 2023 |
 | Region | eu-central-1 (Frankfurt) |
+
+## Architecture
+
+```
+Internet → Cloudflare DNS → CloudFront (HTTPS) → ALB → Auto Scaling Group
+                                                              ↓
+                                                    EC2 instances (2-4)
+                                                    Apache + PHP + SQLite
+```
 
 ## Project Structure
 
