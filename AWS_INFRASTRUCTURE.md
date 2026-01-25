@@ -239,6 +239,44 @@ curl -I https://aaronzammit.com/bmi/
 - **ACM:** Free
 - **EC2:** t3.micro (existing)
 
+## Troubleshooting
+
+### WordPress wp-admin Redirect Loop (Resolved)
+
+**Issue:** Accessing `https://aaronzammit.com/wp-admin/` caused an infinite redirect loop.
+
+**Root Cause:**
+```
+User (HTTPS) → CloudFront → ALB (HTTP) → EC2
+                                ↓
+                    ALB sets X-Forwarded-Proto: http
+                                ↓
+                    WordPress sees "http", redirects to HTTPS
+                                ↓
+                    Infinite redirect loop
+```
+
+CloudFront connects to the ALB using HTTP (origin protocol policy: http-only). The ALB then sets `X-Forwarded-Proto: http` based on the connection it received. WordPress checks this header, sees `http`, and redirects to HTTPS - creating an infinite loop.
+
+**Solution:**
+1. Added a custom CloudFront origin header `X-CloudFront-Forwarded-Proto: https` that the ALB cannot overwrite
+2. Updated `wp-config.php` to check for this new header:
+
+```php
+/* CloudFront HTTPS detection */
+if (isset($_SERVER['HTTP_X_CLOUDFRONT_FORWARDED_PROTO']) && $_SERVER['HTTP_X_CLOUDFRONT_FORWARDED_PROTO'] === 'https') {
+    $_SERVER['HTTPS'] = 'on';
+}
+```
+
+**Fix Applied:**
+```bash
+# Add custom origin header to CloudFront
+aws cloudfront get-distribution-config --id E16YYJ4DT46N17 --output json > cf-config.json
+# Edit to add CustomHeaders: X-CloudFront-Forwarded-Proto: https
+aws cloudfront update-distribution --id E16YYJ4DT46N17 --distribution-config file://cf-config.json --if-match <ETag>
+```
+
 ## Cleanup Commands
 
 To tear down the infrastructure:
