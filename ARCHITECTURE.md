@@ -60,9 +60,24 @@
 │  │   ┌─────────────────────────────────────────────────────────────────────────────────────────────┐     │  │
 │  │   │                           TARGET GROUP (bmi-calculator-tg)                                   │     │  │
 │  │   │                                                                                              │     │  │
-│  │   │   Protocol: HTTP:80                          Targets: 2 instances (Multi-AZ)                │     │  │
+│  │   │   Protocol: HTTP:80                          Targets: Auto Scaling Group (2-4 instances)   │     │  │
 │  │   │   Health Check: GET /bmi/ (HTTP 200)                                                        │     │  │
 │  │   │   Interval: 10s | Timeout: 5s | Healthy: 2 | Unhealthy: 2                                   │     │  │
+│  │   └─────────────────────────────────────────────────────────────────────────────────────────────┘     │  │
+│  │                                                    │                                                   │  │
+│  │                                                    ▼                                                   │  │
+│  │   ┌─────────────────────────────────────────────────────────────────────────────────────────────┐     │  │
+│  │   │                        AUTO SCALING GROUP (bmi-calculator-asg)                               │     │  │
+│  │   │                                                                                              │     │  │
+│  │   │   Min: 2 | Desired: 2 | Max: 4                                                              │     │  │
+│  │   │   Launch Template: lt-00e9af6830a1fb15c (v2)                                                │     │  │
+│  │   │   Health Check: ELB | Grace Period: 120s                                                    │     │  │
+│  │   │                                                                                              │     │  │
+│  │   │   Scaling Policies:                                                                          │     │  │
+│  │   │   ┌─────────────────────────────────────────────────────────────────────────────────────┐   │     │  │
+│  │   │   │  📈 CPU Target Tracking    │ Scale when CPU > 70%                                   │   │     │  │
+│  │   │   │  📈 Memory Target Tracking │ Scale when Memory > 70%                                │   │     │  │
+│  │   │   └─────────────────────────────────────────────────────────────────────────────────────┘   │     │  │
 │  │   └─────────────────────────────────────────────────────────────────────────────────────────────┘     │  │
 │  │                                           │                 │                                          │  │
 │  │                              ┌────────────┘                 └────────────┐                             │  │
@@ -70,26 +85,25 @@
 │  │   ┌─────────────────────────────────────────────────────────────────────────────────────────────┐     │  │
 │  │   │                                      VPC (vpc-04c3e303f1975de6c)                             │     │  │
 │  │   │                                                                                              │     │  │
-│  │   │  ┌──────────────────────────────────────┐   ┌──────────────────────────────────────┐        │     │  │
-│  │   │  │   SUBNET: eu-central-1a              │   │   SUBNET: eu-central-1b              │        │     │  │
-│  │   │  │   172.31.16.0/20                     │   │   172.31.32.0/20                     │        │     │  │
-│  │   │  │                                      │   │                                      │        │     │  │
-│  │   │  │  ┌────────────────────────────────┐  │   │  ┌────────────────────────────────┐  │        │     │  │
-│  │   │  │  │  EC2: bmi-calculator-2         │  │   │  │  EC2: bmi-calculator           │  │        │     │  │
-│  │   │  │  │  i-09a84abf4fb782f8e           │  │   │  │  i-02c7b760e6ac58028           │  │        │     │  │
-│  │   │  │  │                                │  │   │  │                                │  │        │     │  │
-│  │   │  │  │  Type: t3.micro                │  │   │  │  Type: t3.micro                │  │        │     │  │
-│  │   │  │  │  Private: 172.31.31.207        │  │   │  │  Private: 172.31.47.199        │  │        │     │  │
-│  │   │  │  │  Status: ✅ Healthy            │  │   │  │  Status: ✅ Healthy            │  │        │     │  │
-│  │   │  │  │                                │  │   │  │                                │  │        │     │  │
-│  │   │  │  │  ┌──────────────────────────┐  │  │   │  │  ┌──────────────────────────┐  │  │        │     │  │
-│  │   │  │  │  │ Apache 2.4 → PHP → SQLite│  │  │   │  │  │ Apache 2.4 → PHP → SQLite│  │  │        │     │  │
-│  │   │  │  │  └──────────────────────────┘  │  │   │  │  └──────────────────────────┘  │  │        │     │  │
-│  │   │  │  │                                │  │   │  │                                │  │        │     │  │
-│  │   │  │  │  EBS: gp3, 8GB                 │  │   │  │  EBS: gp3, 8GB                 │  │        │     │  │
-│  │   │  │  └────────────────────────────────┘  │   │  └────────────────────────────────┘  │        │     │  │
-│  │   │  │                                      │   │                                      │        │     │  │
-│  │   │  └──────────────────────────────────────┘   └──────────────────────────────────────┘        │     │  │
+│  │   │  ┌───────────────────────────────────┐  ┌───────────────────────────────────┐               │     │  │
+│  │   │  │   SUBNET: eu-central-1a/1b/1c     │  │   SUBNET: eu-central-1a/1b/1c     │               │     │  │
+│  │   │  │                                   │  │                                   │               │     │  │
+│  │   │  │  ┌─────────────────────────────┐  │  │  ┌─────────────────────────────┐  │  ... (up to 4)│     │  │
+│  │   │  │  │  EC2 (Auto Scaled)          │  │  │  │  EC2 (Auto Scaled)          │  │               │     │  │
+│  │   │  │  │  t3.micro                   │  │  │  │  t3.micro                   │  │               │     │  │
+│  │   │  │  │                             │  │  │  │                             │  │               │     │  │
+│  │   │  │  │  ┌───────────────────────┐  │  │  │  │  ┌───────────────────────┐  │  │               │     │  │
+│  │   │  │  │  │ Apache → PHP → SQLite │  │  │  │  │  │ Apache → PHP → SQLite │  │  │               │     │  │
+│  │   │  │  │  └───────────────────────┘  │  │  │  │  └───────────────────────┘  │  │               │     │  │
+│  │   │  │  │  ┌───────────────────────┐  │  │  │  │  ┌───────────────────────┐  │  │               │     │  │
+│  │   │  │  │  │ CloudWatch Agent      │  │  │  │  │  │ CloudWatch Agent      │  │  │               │     │  │
+│  │   │  │  │  │ (Memory Metrics)      │  │  │  │  │  │ (Memory Metrics)      │  │  │               │     │  │
+│  │   │  │  │  └───────────────────────┘  │  │  │  │  └───────────────────────┘  │  │               │     │  │
+│  │   │  │  │                             │  │  │  │                             │  │               │     │  │
+│  │   │  │  │  EBS: gp3, 8GB              │  │  │  │  EBS: gp3, 8GB              │  │               │     │  │
+│  │   │  │  └─────────────────────────────┘  │  │  └─────────────────────────────┘  │               │     │  │
+│  │   │  │                                   │  │                                   │               │     │  │
+│  │   │  └───────────────────────────────────┘  └───────────────────────────────────┘               │     │  │
 │  │   │                                                                                              │     │  │
 │  │   └─────────────────────────────────────────────────────────────────────────────────────────────┘     │  │
 │  │                                                                                                        │  │
@@ -98,21 +112,103 @@
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Request Flow (with Load Balancing)
+## Auto Scaling Configuration
 
 ```
-┌──────────┐     ┌───────────┐     ┌────────────┐     ┌─────┐     ┌──────────────┐
-│  User    │────▶│ Cloudflare│────▶│ CloudFront │────▶│ ALB │────▶│ Target Group │
-│ Browser  │     │    DNS    │     │    CDN     │     │     │     │  (2 targets) │
-└──────────┘     └───────────┘     └────────────┘     └─────┘     └──────────────┘
-                                                                    │           │
-                                                         ┌──────────┘           └──────────┐
-                                                         ▼                                  ▼
-                                                  ┌─────────────┐                   ┌─────────────┐
-                                                  │    EC2 #1   │                   │    EC2 #2   │
-                                                  │ eu-cent-1a  │                   │ eu-cent-1b  │
-                                                  │  (Active)   │                   │  (Active)   │
-                                                  └─────────────┘                   └─────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     AUTO SCALING GROUP                                               │
+│                                                                                                      │
+│   ┌───────────────────────────────────────────────────────────────────────────────────────────┐     │
+│   │                              CAPACITY SETTINGS                                             │     │
+│   │                                                                                            │     │
+│   │   Minimum:     2 instances (always running for high availability)                         │     │
+│   │   Desired:     2 instances (normal operation)                                             │     │
+│   │   Maximum:     4 instances (peak load capacity)                                           │     │
+│   │                                                                                            │     │
+│   │   ┌────────────────────────────────────────────────────────────────────────────────────┐  │     │
+│   │   │                         SCALING POLICIES                                           │  │     │
+│   │   │                                                                                    │  │     │
+│   │   │   ┌──────────────────────────────────────────────────────────────────────────┐    │  │     │
+│   │   │   │  CPU-BASED SCALING (Target Tracking)                                     │    │  │     │
+│   │   │   │                                                                          │    │  │     │
+│   │   │   │  Metric:     ASGAverageCPUUtilization                                   │    │  │     │
+│   │   │   │  Target:     70%                                                         │    │  │     │
+│   │   │   │                                                                          │    │  │     │
+│   │   │   │  Behavior:                                                               │    │  │     │
+│   │   │   │    • CPU < 70% → Scale in (remove instances)                            │    │  │     │
+│   │   │   │    • CPU > 70% → Scale out (add instances)                              │    │  │     │
+│   │   │   └──────────────────────────────────────────────────────────────────────────┘    │  │     │
+│   │   │                                                                                    │  │     │
+│   │   │   ┌──────────────────────────────────────────────────────────────────────────┐    │  │     │
+│   │   │   │  MEMORY-BASED SCALING (Target Tracking)                                  │    │  │     │
+│   │   │   │                                                                          │    │  │     │
+│   │   │   │  Metric:     mem_used_percent (Custom - BMICalculator namespace)        │    │  │     │
+│   │   │   │  Target:     70%                                                         │    │  │     │
+│   │   │   │                                                                          │    │  │     │
+│   │   │   │  Behavior:                                                               │    │  │     │
+│   │   │   │    • Memory < 70% → Scale in (remove instances)                         │    │  │     │
+│   │   │   │    • Memory > 70% → Scale out (add instances)                           │    │  │     │
+│   │   │   │                                                                          │    │  │     │
+│   │   │   │  Note: Requires CloudWatch Agent on instances                           │    │  │     │
+│   │   │   └──────────────────────────────────────────────────────────────────────────┘    │  │     │
+│   │   └────────────────────────────────────────────────────────────────────────────────────┘  │     │
+│   │                                                                                            │     │
+│   └───────────────────────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                                      │
+│   ┌───────────────────────────────────────────────────────────────────────────────────────────┐     │
+│   │                              LAUNCH TEMPLATE (lt-00e9af6830a1fb15c v2)                     │     │
+│   │                                                                                            │     │
+│   │   AMI:              ami-04f362ea12d5ad433 (Custom with Apache+PHP+App)                    │     │
+│   │   Instance Type:    t3.micro                                                               │     │
+│   │   Key Pair:         bmi-calculator-key                                                     │     │
+│   │   Security Group:   sg-0415fab6c3b564196                                                  │     │
+│   │   IAM Profile:      CloudWatchAgentProfile                                                 │     │
+│   │   Monitoring:       Detailed (1-minute metrics)                                            │     │
+│   │   User Data:        Installs & configures CloudWatch Agent                                 │     │
+│   └───────────────────────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                                      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Scaling Scenarios
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     SCALING SCENARIOS                                                │
+│                                                                                                      │
+│  SCENARIO 1: Normal Traffic                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │  CPU: ~30%  Memory: ~40%  →  2 instances running (minimum)                                  │   │
+│  │  ┌─────┐  ┌─────┐                                                                           │   │
+│  │  │ EC2 │  │ EC2 │                                                                           │   │
+│  │  └─────┘  └─────┘                                                                           │   │
+│  └─────────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                                      │
+│  SCENARIO 2: Moderate Load (CPU or Memory > 70%)                                                    │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │  CPU: ~75%  Memory: ~50%  →  3 instances (scaled out +1)                                    │   │
+│  │  ┌─────┐  ┌─────┐  ┌─────┐                                                                  │   │
+│  │  │ EC2 │  │ EC2 │  │ EC2 │ ← New instance launched                                          │   │
+│  │  └─────┘  └─────┘  └─────┘                                                                  │   │
+│  └─────────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                                      │
+│  SCENARIO 3: High Load (sustained high CPU/Memory)                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │  CPU: ~85%  Memory: ~80%  →  4 instances (maximum capacity)                                 │   │
+│  │  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐                                                         │   │
+│  │  │ EC2 │  │ EC2 │  │ EC2 │  │ EC2 │                                                         │   │
+│  │  └─────┘  └─────┘  └─────┘  └─────┘                                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                                      │
+│  SCENARIO 4: Instance Failure                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │  EC2 #1 fails health check  →  Replaced automatically                                       │   │
+│  │  ┌─────┐  ┌─────┐              ┌─────┐  ┌─────┐                                             │   │
+│  │  │ ❌  │  │ EC2 │     →        │ EC2 │  │ EC2 │ ← New replacement                           │   │
+│  │  └─────┘  └─────┘              └─────┘  └─────┘                                             │   │
+│  └─────────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                                      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Health Check Configuration
@@ -121,77 +217,28 @@
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                              ALB HEALTH CHECK                                    │
 │                                                                                  │
-│   ┌─────────────────────────────────────────────────────────────────────────┐   │
-│   │                                                                          │   │
-│   │   Protocol:        HTTP                                                  │   │
-│   │   Path:            /bmi/                                                 │   │
-│   │   Port:            80 (traffic-port)                                     │   │
-│   │   Expected:        HTTP 200                                              │   │
-│   │                                                                          │   │
-│   │   ┌─────────────────────────────────────────────────────────────────┐   │   │
-│   │   │  TIMING                                                          │   │   │
-│   │   │                                                                  │   │   │
-│   │   │  Interval:     Every 10 seconds                                  │   │   │
-│   │   │  Timeout:      5 seconds                                         │   │   │
-│   │   │                                                                  │   │   │
-│   │   │  Healthy after:    2 consecutive successes (20 seconds)         │   │   │
-│   │   │  Unhealthy after:  2 consecutive failures (20 seconds)          │   │   │
-│   │   └─────────────────────────────────────────────────────────────────┘   │   │
-│   │                                                                          │   │
-│   │   ┌─────────────────────────────────────────────────────────────────┐   │   │
-│   │   │  FAILOVER BEHAVIOR                                               │   │   │
-│   │   │                                                                  │   │   │
-│   │   │  If EC2 #1 fails:                                                │   │   │
-│   │   │    → Detected in ~20 seconds                                     │   │   │
-│   │   │    → Traffic routed 100% to EC2 #2                              │   │   │
-│   │   │    → Zero downtime for users                                     │   │   │
-│   │   │                                                                  │   │   │
-│   │   │  If both fail:                                                   │   │   │
-│   │   │    → ALB returns HTTP 503                                        │   │   │
-│   │   └─────────────────────────────────────────────────────────────────┘   │   │
-│   │                                                                          │   │
-│   └─────────────────────────────────────────────────────────────────────────┘   │
+│   Protocol:        HTTP                                                          │
+│   Path:            /bmi/                                                         │
+│   Port:            80 (traffic-port)                                             │
+│   Expected:        HTTP 200                                                      │
+│                                                                                  │
+│   Interval:        10 seconds                                                    │
+│   Timeout:         5 seconds                                                     │
+│   Healthy after:   2 consecutive successes (20 seconds)                         │
+│   Unhealthy after: 2 consecutive failures (20 seconds)                          │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Security Groups
+## CloudWatch Metrics
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                                SECURITY GROUP FLOW                                   │
-│                                                                                      │
-│   INTERNET                                                                           │
-│       │                                                                              │
-│       ▼                                                                              │
-│   ┌───────────────────────────────────────────────────────────────────┐             │
-│   │              ALB Security Group (sg-0d78cc17352915ee6)            │             │
-│   │                                                                    │             │
-│   │   INBOUND:                          OUTBOUND:                      │             │
-│   │   ┌──────────────────────┐          ┌──────────────────────┐      │             │
-│   │   │ TCP 80  │ 0.0.0.0/0  │          │ All     │ 0.0.0.0/0  │      │             │
-│   │   │ TCP 443 │ 0.0.0.0/0  │          │         │            │      │             │
-│   │   └──────────────────────┘          └──────────────────────┘      │             │
-│   └───────────────────────────────────────────────────────────────────┘             │
-│       │                                                                              │
-│       │ Only from ALB SG                                                            │
-│       ▼                                                                              │
-│   ┌───────────────────────────────────────────────────────────────────┐             │
-│   │              EC2 Security Group (sg-0415fab6c3b564196)            │             │
-│   │              (Applied to both instances)                           │             │
-│   │                                                                    │             │
-│   │   INBOUND:                          OUTBOUND:                      │             │
-│   │   ┌──────────────────────────────┐  ┌──────────────────────┐      │             │
-│   │   │ TCP 80  │ sg-0d78cc17352915ee6│  │ All     │ 0.0.0.0/0  │      │             │
-│   │   │ TCP 22  │ 0.0.0.0/0 ⚠️        │  │         │            │      │             │
-│   │   │ TCP 443 │ 0.0.0.0/0           │  └──────────────────────┘      │             │
-│   │   └──────────────────────────────┘                                 │             │
-│   └───────────────────────────────────────────────────────────────────┘             │
-│                                                                                      │
-│   ⚠️  SSH open to world - Recommend restricting to specific IP                      │
-│                                                                                      │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
+| Metric | Namespace | Source | Used For |
+|--------|-----------|--------|----------|
+| CPUUtilization | AWS/EC2 | EC2 native | CPU scaling policy |
+| mem_used_percent | BMICalculator | CloudWatch Agent | Memory scaling policy |
+| HealthyHostCount | AWS/ApplicationELB | ALB | Monitoring |
+| UnHealthyHostCount | AWS/ApplicationELB | ALB | Alerting |
+| RequestCount | AWS/ApplicationELB | ALB | Traffic analysis |
 
 ## Component Details
 
@@ -200,46 +247,41 @@
 | CloudFront | E16YYJ4DT46N17 | HTTPS termination, TLSv1.2, redirect HTTP→HTTPS |
 | ACM Certificate | df802f98-5faa-4328-a927-571382bd00e5 | aaronzammit.com, *.aaronzammit.com |
 | ALB | bmi-calculator-alb | 3 AZs, HTTP listener on port 80 |
-| Target Group | bmi-calculator-tg | HTTP:80, health check /bmi/, 2 targets |
-| EC2 #1 | i-02c7b760e6ac58028 | t3.micro, eu-central-1b, bmi-calculator |
-| EC2 #2 | i-09a84abf4fb782f8e | t3.micro, eu-central-1a, bmi-calculator-2 |
+| Target Group | bmi-calculator-tg | HTTP:80, health check /bmi/, ELB health |
+| Auto Scaling Group | bmi-calculator-asg | Min: 2, Max: 4, CPU+Memory scaling |
+| Launch Template | lt-00e9af6830a1fb15c v2 | t3.micro, CloudWatch Agent, detailed monitoring |
 | AMI | ami-04f362ea12d5ad433 | Custom AMI with Apache+PHP+App |
-
-## EC2 Instances
-
-| Name | Instance ID | AZ | Private IP | Status |
-|------|-------------|-----|------------|--------|
-| bmi-calculator | i-02c7b760e6ac58028 | eu-central-1b | 172.31.47.199 | ✅ Healthy |
-| bmi-calculator-2 | i-09a84abf4fb782f8e | eu-central-1a | 172.31.31.207 | ✅ Healthy |
-
-## Health Check Settings
-
-| Setting | Value | Description |
-|---------|-------|-------------|
-| Protocol | HTTP | Health check protocol |
-| Path | /bmi/ | Endpoint to check |
-| Port | 80 | Port to check |
-| Interval | 10s | Time between checks |
-| Timeout | 5s | Time to wait for response |
-| Healthy Threshold | 2 | Consecutive successes to mark healthy |
-| Unhealthy Threshold | 2 | Consecutive failures to mark unhealthy |
-| Success Code | 200 | Expected HTTP response code |
+| IAM Role | CloudWatchAgentRole | CloudWatch Agent + SSM permissions |
 
 ## Resiliency Features
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Multi-AZ Deployment | ✅ | Instances in eu-central-1a and eu-central-1b |
+| Multi-AZ Deployment | ✅ | Instances distributed across 3 AZs |
 | Load Balancing | ✅ | ALB distributes traffic across instances |
 | Health Checks | ✅ | Automatic detection of failed instances (20s) |
 | Automatic Failover | ✅ | Traffic rerouted to healthy instances |
+| Auto Scaling | ✅ | Scales 2-4 instances based on CPU/Memory |
+| Self-Healing | ✅ | Failed instances automatically replaced |
 | Cross-Zone LB | ✅ | ALB can route to any AZ |
+| Detailed Monitoring | ✅ | 1-minute CloudWatch metrics |
 
 ## Network Details
 
 | Resource | CIDR/IP | Notes |
 |----------|---------|-------|
 | VPC | vpc-04c3e303f1975de6c | Default VPC |
-| Subnet 1a | 172.31.16.0/20 | eu-central-1a (EC2 #2) |
-| Subnet 1b | 172.31.32.0/20 | eu-central-1b (EC2 #1) |
-| Subnet 1c | 172.31.0.0/20 | eu-central-1c (available) |
+| Subnet 1a | 172.31.16.0/20 | eu-central-1a |
+| Subnet 1b | 172.31.32.0/20 | eu-central-1b |
+| Subnet 1c | 172.31.0.0/20 | eu-central-1c |
+
+## Cost Estimate (Monthly)
+
+| Resource | Cost |
+|----------|------|
+| EC2 (2x t3.micro) | ~$15.20 |
+| EC2 (scaling to 4x) | ~$30.40 |
+| ALB | ~$16 + data |
+| CloudFront | Free tier (1TB) |
+| CloudWatch | ~$3 |
+| **Total (baseline)** | **~$35** |
