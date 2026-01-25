@@ -32,6 +32,7 @@
 │  │                                                                                                        │  │
 │  │   SSL: ACM Certificate (arn:aws:acm:us-east-1:...:certificate/df802f98-5faa-4328-a927-571382bd00e5)  │  │
 │  │   Protocol: HTTPS (TLSv1.2_2021) → HTTP to origin                                                     │  │
+│  │   Custom Header: X-CloudFront-Forwarded-Proto: https (for WordPress HTTPS detection)                  │  │
 │  │   Cache: Disabled (CachingDisabled policy)                                                            │  │
 │  └───────────────────────────────────────────────────────────────────────────────────────────────────────┘  │
 │                                                    │                                                         │
@@ -70,7 +71,7 @@
 │  │   │                        AUTO SCALING GROUP (bmi-calculator-asg)                               │     │  │
 │  │   │                                                                                              │     │  │
 │  │   │   Min: 2 | Desired: 2 | Max: 4                                                              │     │  │
-│  │   │   Launch Template: lt-00e9af6830a1fb15c (v2)                                                │     │  │
+│  │   │   Launch Template: lt-00e9af6830a1fb15c (v5)                                                │     │  │
 │  │   │   Health Check: ELB | Grace Period: 120s                                                    │     │  │
 │  │   │                                                                                              │     │  │
 │  │   │   Scaling Policies:                                                                          │     │  │
@@ -156,9 +157,9 @@
 │   └───────────────────────────────────────────────────────────────────────────────────────────┘     │
 │                                                                                                      │
 │   ┌───────────────────────────────────────────────────────────────────────────────────────────┐     │
-│   │                              LAUNCH TEMPLATE (lt-00e9af6830a1fb15c v2)                     │     │
+│   │                              LAUNCH TEMPLATE (lt-00e9af6830a1fb15c v5)                     │     │
 │   │                                                                                            │     │
-│   │   AMI:              ami-04f362ea12d5ad433 (Custom with Apache+PHP+App)                    │     │
+│   │   AMI:              ami-0b5a0f88c6904cf64 (Custom with CloudFront HTTPS fix)              │     │
 │   │   Instance Type:    t3.micro                                                               │     │
 │   │   Key Pair:         bmi-calculator-key                                                     │     │
 │   │   Security Group:   sg-0415fab6c3b564196                                                  │     │
@@ -244,13 +245,13 @@
 
 | Component | Identifier | Key Configuration |
 |-----------|------------|-------------------|
-| CloudFront | E16YYJ4DT46N17 | HTTPS termination, TLSv1.2, redirect HTTP→HTTPS |
+| CloudFront | E16YYJ4DT46N17 | HTTPS termination, TLSv1.2, X-CloudFront-Forwarded-Proto header |
 | ACM Certificate | df802f98-5faa-4328-a927-571382bd00e5 | aaronzammit.com, *.aaronzammit.com |
 | ALB | bmi-calculator-alb | 3 AZs, HTTP listener on port 80 |
 | Target Group | bmi-calculator-tg | HTTP:80, health check /bmi/, ELB health |
 | Auto Scaling Group | bmi-calculator-asg | Min: 2, Max: 4, CPU+Memory scaling |
-| Launch Template | lt-00e9af6830a1fb15c v4 | t3.micro, CloudWatch Agent, detailed monitoring |
-| AMI | ami-07b05425f6b4f06cc | Custom AMI with Apache+PHP+App+GA+WP URL fix |
+| Launch Template | lt-00e9af6830a1fb15c v5 | t3.micro, CloudWatch Agent, detailed monitoring |
+| AMI | ami-0b5a0f88c6904cf64 | Custom AMI with CloudFront HTTPS fix |
 | IAM Role | CloudWatchAgentRole | CloudWatch Agent + SSM permissions |
 | Google Analytics | G-3B3EDTZ0JT | Traffic analytics and audience insights |
 

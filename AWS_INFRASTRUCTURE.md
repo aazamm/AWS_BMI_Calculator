@@ -13,8 +13,8 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 ### Auto Scaling Group
 - **Name:** bmi-calculator-asg
 - **Min/Desired/Max:** 2 / 2 / 4
-- **Launch Template:** lt-00e9af6830a1fb15c (v4)
-- **AMI:** ami-07b05425f6b4f06cc
+- **Launch Template:** lt-00e9af6830a1fb15c (v5)
+- **AMI:** ami-0b5a0f88c6904cf64
 - **Instance Type:** t3.micro
 - **Availability Zones:** eu-central-1a, eu-central-1b, eu-central-1c
 - **Scaling Policies:** CPU > 70%, Memory > 70%
@@ -22,8 +22,8 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 
 ### Launch Template
 - **ID:** lt-00e9af6830a1fb15c
-- **Version:** 4 (with WordPress URL fix)
-- **AMI:** ami-07b05425f6b4f06cc
+- **Version:** 5 (with CloudFront HTTPS fix)
+- **AMI:** ami-0b5a0f88c6904cf64
 - **IAM Profile:** CloudWatchAgentProfile
 - **Monitoring:** Detailed (1-minute)
 - **User Data:** CloudWatch Agent installation
@@ -40,6 +40,7 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 - **Admin URL:** https://aaronzammit.com/wp-admin/
 - **Database:** MariaDB (wordpress)
 - **Theme:** Twenty Twenty-Five
+- **HTTPS Detection:** Via `X-CloudFront-Forwarded-Proto` header in wp-config.php
 
 ### ACM Certificate (us-east-1)
 - **ARN:** `arn:aws:acm:us-east-1:359345324847:certificate/df802f98-5faa-4328-a927-571382bd00e5`
@@ -64,6 +65,8 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 - **Domain:** `d2392ulp4il11k.cloudfront.net`
 - **Alternate Domain:** aaronzammit.com
 - **Origin:** bmi-calculator-alb-1620953438.eu-central-1.elb.amazonaws.com
+- **Origin Protocol Policy:** HTTP-only
+- **Custom Origin Header:** `X-CloudFront-Forwarded-Proto: https`
 - **Cache Policy:** CachingDisabled (4135ea2d-6df8-44a3-9df3-4b5a84be39ad)
 - **Origin Request Policy:** AllViewer (216adef6-5c7f-47e4-b989-5492eafa07d3)
 - **SSL:** TLSv1.2_2021, SNI
