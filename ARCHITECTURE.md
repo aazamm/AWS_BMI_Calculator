@@ -249,8 +249,8 @@
 | ALB | bmi-calculator-alb | 3 AZs, HTTP listener on port 80 |
 | Target Group | bmi-calculator-tg | HTTP:80, health check /bmi/, ELB health |
 | Auto Scaling Group | bmi-calculator-asg | Min: 2, Max: 4, CPU+Memory scaling |
-| Launch Template | lt-00e9af6830a1fb15c v3 | t3.micro, CloudWatch Agent, detailed monitoring |
-| AMI | ami-08cd8dc3fa78b088d | Custom AMI with Apache+PHP+App+GA |
+| Launch Template | lt-00e9af6830a1fb15c v4 | t3.micro, CloudWatch Agent, detailed monitoring |
+| AMI | ami-07b05425f6b4f06cc | Custom AMI with Apache+PHP+App+GA+WP URL fix |
 | IAM Role | CloudWatchAgentRole | CloudWatch Agent + SSM permissions |
 | Google Analytics | G-3B3EDTZ0JT | Traffic analytics and audience insights |
 

@@ -13,8 +13,8 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 ### Auto Scaling Group
 - **Name:** bmi-calculator-asg
 - **Min/Desired/Max:** 2 / 2 / 4
-- **Launch Template:** lt-00e9af6830a1fb15c (v3)
-- **AMI:** ami-08cd8dc3fa78b088d
+- **Launch Template:** lt-00e9af6830a1fb15c (v4)
+- **AMI:** ami-07b05425f6b4f06cc
 - **Instance Type:** t3.micro
 - **Availability Zones:** eu-central-1a, eu-central-1b, eu-central-1c
 - **Scaling Policies:** CPU > 70%, Memory > 70%
@@ -22,8 +22,8 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 
 ### Launch Template
 - **ID:** lt-00e9af6830a1fb15c
-- **Version:** 3 (with Google Analytics)
-- **AMI:** ami-08cd8dc3fa78b088d
+- **Version:** 4 (with WordPress URL fix)
+- **AMI:** ami-07b05425f6b4f06cc
 - **IAM Profile:** CloudWatchAgentProfile
 - **Monitoring:** Detailed (1-minute)
 - **User Data:** CloudWatch Agent installation
@@ -33,6 +33,13 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 - **Property:** BMI Calculator
 - **Tracking:** Page views, demographics, traffic sources
 - **Dashboard:** https://analytics.google.com/
+
+### WordPress Configuration
+- **Site URL:** https://aaronzammit.com
+- **Home URL:** https://aaronzammit.com
+- **Admin URL:** https://aaronzammit.com/wp-admin/
+- **Database:** MariaDB (wordpress)
+- **Theme:** Twenty Twenty-Five
 
 ### ACM Certificate (us-east-1)
 - **ARN:** `arn:aws:acm:us-east-1:359345324847:certificate/df802f98-5faa-4328-a927-571382bd00e5`
