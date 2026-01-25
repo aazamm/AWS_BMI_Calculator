@@ -161,11 +161,11 @@ aws elbv2 modify-load-balancer-attributes \
 | 1 | Remove public port 80 from EC2 SG | ✅ Done | 2026-01-25 |
 | 2 | Restrict SSH to specific IP | ⏳ Pending | - |
 | 3 | Enable ALB deletion protection | ⏳ Pending | - |
-| 4 | Create EBS snapshot | ⏳ Pending | - |
+| 4 | Create EBS snapshot | ✅ Done | 2026-01-25 |
 | 5 | Enable detailed monitoring | ⏳ Pending | - |
 | 6 | Create CloudWatch alarms | ⏳ Pending | - |
-| 7 | Add second EC2 instance | ⏳ Pending | - |
-| 8 | Set up Auto Scaling | ⏳ Pending | - |
+| 7 | Add second EC2 instance (Multi-AZ) | ✅ Done | 2026-01-25 |
+| 8 | Enhanced ALB health checks | ✅ Done | 2026-01-25 |
 | 9 | Enable ALB access logs | ⏳ Pending | - |
 | 10 | Add AWS WAF | ⏳ Pending | - |
 

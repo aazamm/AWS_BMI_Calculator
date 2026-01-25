@@ -60,52 +60,36 @@
 │  │   ┌─────────────────────────────────────────────────────────────────────────────────────────────┐     │  │
 │  │   │                           TARGET GROUP (bmi-calculator-tg)                                   │     │  │
 │  │   │                                                                                              │     │  │
-│  │   │   Protocol: HTTP:80                                                                          │     │  │
+│  │   │   Protocol: HTTP:80                          Targets: 2 instances (Multi-AZ)                │     │  │
 │  │   │   Health Check: GET /bmi/ (HTTP 200)                                                        │     │  │
-│  │   │   Interval: 30s | Timeout: 5s | Healthy: 5 | Unhealthy: 2                                   │     │  │
+│  │   │   Interval: 10s | Timeout: 5s | Healthy: 2 | Unhealthy: 2                                   │     │  │
 │  │   └─────────────────────────────────────────────────────────────────────────────────────────────┘     │  │
-│  │                                                    │                                                   │  │
-│  │                                                    ▼                                                   │  │
+│  │                                           │                 │                                          │  │
+│  │                              ┌────────────┘                 └────────────┐                             │  │
+│  │                              ▼                                           ▼                             │  │
 │  │   ┌─────────────────────────────────────────────────────────────────────────────────────────────┐     │  │
 │  │   │                                      VPC (vpc-04c3e303f1975de6c)                             │     │  │
 │  │   │                                                                                              │     │  │
-│  │   │   ┌─────────────────────────────────────────────────────────────────────────────────────┐   │     │  │
-│  │   │   │                            SUBNET: eu-central-1b (172.31.32.0/20)                    │   │     │  │
-│  │   │   │                                                                                      │   │     │  │
-│  │   │   │   ┌─────────────────────────────────────────────────────────────────────────────┐   │   │     │  │
-│  │   │   │   │                     EC2 INSTANCE (i-02c7b760e6ac58028)                       │   │   │     │  │
-│  │   │   │   │                                                                              │   │   │     │  │
-│  │   │   │   │   Type: t3.micro (1 vCPU, 2 threads, 1GB RAM)                               │   │   │     │  │
-│  │   │   │   │   Private IP: 172.31.47.199                                                  │   │   │     │  │
-│  │   │   │   │   Public IP: 3.78.190.129                                                    │   │   │     │  │
-│  │   │   │   │   AMI: ami-09e939ec71a36e537 (Amazon Linux)                                  │   │   │     │  │
-│  │   │   │   │                                                                              │   │   │     │  │
-│  │   │   │   │   Security Group: sg-0415fab6c3b564196                                       │   │   │     │  │
-│  │   │   │   │     • Inbound: 80 from ALB SG (sg-0d78cc17352915ee6)                        │   │   │     │  │
-│  │   │   │   │     • Inbound: 22 from 0.0.0.0/0 (SSH - needs restriction!)                 │   │   │     │  │
-│  │   │   │   │     • Inbound: 443 from 0.0.0.0/0                                            │   │   │     │  │
-│  │   │   │   │                                                                              │   │   │     │  │
-│  │   │   │   │   ┌──────────────────────────────────────────────────────────────────────┐  │   │   │     │  │
-│  │   │   │   │   │                         APPLICATION STACK                            │  │   │   │     │  │
-│  │   │   │   │   │                                                                      │  │   │   │     │  │
-│  │   │   │   │   │   ┌─────────────┐   ┌─────────────┐   ┌─────────────────────────┐   │  │   │   │     │  │
-│  │   │   │   │   │   │   Apache    │   │    PHP      │   │       SQLite            │   │  │   │   │     │  │
-│  │   │   │   │   │   │   2.4.66    │──▶│   (mod_php) │──▶│     bmi_data.db         │   │  │   │   │     │  │
-│  │   │   │   │   │   │   :80       │   │             │   │                         │   │  │   │   │     │  │
-│  │   │   │   │   │   └─────────────┘   └─────────────┘   └─────────────────────────┘   │  │   │   │     │  │
-│  │   │   │   │   │                                                                      │  │   │   │     │  │
-│  │   │   │   │   │   Document Root: /var/www/html/bmi/                                 │  │   │   │     │  │
-│  │   │   │   │   │   Files: index.php, admin.php, db.php, style.css                    │  │   │   │     │  │
-│  │   │   │   │   └──────────────────────────────────────────────────────────────────────┘  │   │   │     │  │
-│  │   │   │   │                                                                              │   │   │     │  │
-│  │   │   │   │   ┌──────────────────────────────────────────────────────────────────────┐  │   │   │     │  │
-│  │   │   │   │   │                          EBS VOLUME                                  │  │   │   │     │  │
-│  │   │   │   │   │   vol-06fafb4b6ab359eb0 | gp3 | 8GB | 3000 IOPS                     │  │   │   │     │  │
-│  │   │   │   │   │   Encrypted: No | Snapshots: None                                    │  │   │   │     │  │
-│  │   │   │   │   └──────────────────────────────────────────────────────────────────────┘  │   │   │     │  │
-│  │   │   │   └─────────────────────────────────────────────────────────────────────────────┘   │   │     │  │
-│  │   │   │                                                                                      │   │     │  │
-│  │   │   └─────────────────────────────────────────────────────────────────────────────────────┘   │     │  │
+│  │   │  ┌──────────────────────────────────────┐   ┌──────────────────────────────────────┐        │     │  │
+│  │   │  │   SUBNET: eu-central-1a              │   │   SUBNET: eu-central-1b              │        │     │  │
+│  │   │  │   172.31.16.0/20                     │   │   172.31.32.0/20                     │        │     │  │
+│  │   │  │                                      │   │                                      │        │     │  │
+│  │   │  │  ┌────────────────────────────────┐  │   │  ┌────────────────────────────────┐  │        │     │  │
+│  │   │  │  │  EC2: bmi-calculator-2         │  │   │  │  EC2: bmi-calculator           │  │        │     │  │
+│  │   │  │  │  i-09a84abf4fb782f8e           │  │   │  │  i-02c7b760e6ac58028           │  │        │     │  │
+│  │   │  │  │                                │  │   │  │                                │  │        │     │  │
+│  │   │  │  │  Type: t3.micro                │  │   │  │  Type: t3.micro                │  │        │     │  │
+│  │   │  │  │  Private: 172.31.31.207        │  │   │  │  Private: 172.31.47.199        │  │        │     │  │
+│  │   │  │  │  Status: ✅ Healthy            │  │   │  │  Status: ✅ Healthy            │  │        │     │  │
+│  │   │  │  │                                │  │   │  │                                │  │        │     │  │
+│  │   │  │  │  ┌──────────────────────────┐  │  │   │  │  ┌──────────────────────────┐  │  │        │     │  │
+│  │   │  │  │  │ Apache 2.4 → PHP → SQLite│  │  │   │  │  │ Apache 2.4 → PHP → SQLite│  │  │        │     │  │
+│  │   │  │  │  └──────────────────────────┘  │  │   │  │  └──────────────────────────┘  │  │        │     │  │
+│  │   │  │  │                                │  │   │  │                                │  │        │     │  │
+│  │   │  │  │  EBS: gp3, 8GB                 │  │   │  │  EBS: gp3, 8GB                 │  │        │     │  │
+│  │   │  │  └────────────────────────────────┘  │   │  └────────────────────────────────┘  │        │     │  │
+│  │   │  │                                      │   │                                      │        │     │  │
+│  │   │  └──────────────────────────────────────┘   └──────────────────────────────────────┘        │     │  │
 │  │   │                                                                                              │     │  │
 │  │   └─────────────────────────────────────────────────────────────────────────────────────────────┘     │  │
 │  │                                                                                                        │  │
@@ -114,37 +98,61 @@
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Request Flow
+## Request Flow (with Load Balancing)
 
 ```
-┌──────────┐     ┌───────────┐     ┌────────────┐     ┌─────┐     ┌──────────────┐     ┌─────────┐
-│  User    │────▶│ Cloudflare│────▶│ CloudFront │────▶│ ALB │────▶│ Target Group │────▶│   EC2   │
-│ Browser  │     │    DNS    │     │    CDN     │     │     │     │              │     │ Apache  │
-└──────────┘     └───────────┘     └────────────┘     └─────┘     └──────────────┘     └─────────┘
-     │                │                  │               │               │                  │
-     │  aaronzammit.com                  │               │               │                  │
-     │  ─────────────▶│                  │               │               │                  │
-     │                │                  │               │               │                  │
-     │                │ CNAME:           │               │               │                  │
-     │                │ d2392...         │               │               │                  │
-     │                │ cloudfront.net   │               │               │                  │
-     │                │─────────────────▶│               │               │                  │
-     │                                   │               │               │                  │
-     │         HTTPS (TLS 1.2)          │               │               │                  │
-     │─────────────────────────────────▶│               │               │                  │
-     │                                   │               │               │                  │
-     │                                   │  HTTP:80     │               │                  │
-     │                                   │─────────────▶│               │                  │
-     │                                   │               │               │                  │
-     │                                   │               │  HTTP:80     │                  │
-     │                                   │               │─────────────▶│                  │
-     │                                   │               │               │                  │
-     │                                   │               │               │  HTTP:80        │
-     │                                   │               │               │────────────────▶│
-     │                                   │               │               │                  │
-     │                                   │               │               │     Response    │
-     │◀────────────────────────────────────────────────────────────────────────────────────│
-     │                                   │               │               │                  │
+┌──────────┐     ┌───────────┐     ┌────────────┐     ┌─────┐     ┌──────────────┐
+│  User    │────▶│ Cloudflare│────▶│ CloudFront │────▶│ ALB │────▶│ Target Group │
+│ Browser  │     │    DNS    │     │    CDN     │     │     │     │  (2 targets) │
+└──────────┘     └───────────┘     └────────────┘     └─────┘     └──────────────┘
+                                                                    │           │
+                                                         ┌──────────┘           └──────────┐
+                                                         ▼                                  ▼
+                                                  ┌─────────────┐                   ┌─────────────┐
+                                                  │    EC2 #1   │                   │    EC2 #2   │
+                                                  │ eu-cent-1a  │                   │ eu-cent-1b  │
+                                                  │  (Active)   │                   │  (Active)   │
+                                                  └─────────────┘                   └─────────────┘
+```
+
+## Health Check Configuration
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              ALB HEALTH CHECK                                    │
+│                                                                                  │
+│   ┌─────────────────────────────────────────────────────────────────────────┐   │
+│   │                                                                          │   │
+│   │   Protocol:        HTTP                                                  │   │
+│   │   Path:            /bmi/                                                 │   │
+│   │   Port:            80 (traffic-port)                                     │   │
+│   │   Expected:        HTTP 200                                              │   │
+│   │                                                                          │   │
+│   │   ┌─────────────────────────────────────────────────────────────────┐   │   │
+│   │   │  TIMING                                                          │   │   │
+│   │   │                                                                  │   │   │
+│   │   │  Interval:     Every 10 seconds                                  │   │   │
+│   │   │  Timeout:      5 seconds                                         │   │   │
+│   │   │                                                                  │   │   │
+│   │   │  Healthy after:    2 consecutive successes (20 seconds)         │   │   │
+│   │   │  Unhealthy after:  2 consecutive failures (20 seconds)          │   │   │
+│   │   └─────────────────────────────────────────────────────────────────┘   │   │
+│   │                                                                          │   │
+│   │   ┌─────────────────────────────────────────────────────────────────┐   │   │
+│   │   │  FAILOVER BEHAVIOR                                               │   │   │
+│   │   │                                                                  │   │   │
+│   │   │  If EC2 #1 fails:                                                │   │   │
+│   │   │    → Detected in ~20 seconds                                     │   │   │
+│   │   │    → Traffic routed 100% to EC2 #2                              │   │   │
+│   │   │    → Zero downtime for users                                     │   │   │
+│   │   │                                                                  │   │   │
+│   │   │  If both fail:                                                   │   │   │
+│   │   │    → ALB returns HTTP 503                                        │   │   │
+│   │   └─────────────────────────────────────────────────────────────────┘   │   │
+│   │                                                                          │   │
+│   └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Security Groups
@@ -152,7 +160,6 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
 │                                SECURITY GROUP FLOW                                   │
-│                                                                                      │
 │                                                                                      │
 │   INTERNET                                                                           │
 │       │                                                                              │
@@ -171,6 +178,7 @@
 │       ▼                                                                              │
 │   ┌───────────────────────────────────────────────────────────────────┐             │
 │   │              EC2 Security Group (sg-0415fab6c3b564196)            │             │
+│   │              (Applied to both instances)                           │             │
 │   │                                                                    │             │
 │   │   INBOUND:                          OUTBOUND:                      │             │
 │   │   ┌──────────────────────────────┐  ┌──────────────────────┐      │             │
@@ -192,17 +200,46 @@
 | CloudFront | E16YYJ4DT46N17 | HTTPS termination, TLSv1.2, redirect HTTP→HTTPS |
 | ACM Certificate | df802f98-5faa-4328-a927-571382bd00e5 | aaronzammit.com, *.aaronzammit.com |
 | ALB | bmi-calculator-alb | 3 AZs, HTTP listener on port 80 |
-| Target Group | bmi-calculator-tg | HTTP:80, health check /bmi/ |
-| EC2 | i-02c7b760e6ac58028 | t3.micro, Amazon Linux, Apache+PHP |
-| EBS | vol-06fafb4b6ab359eb0 | gp3, 8GB, 3000 IOPS |
+| Target Group | bmi-calculator-tg | HTTP:80, health check /bmi/, 2 targets |
+| EC2 #1 | i-02c7b760e6ac58028 | t3.micro, eu-central-1b, bmi-calculator |
+| EC2 #2 | i-09a84abf4fb782f8e | t3.micro, eu-central-1a, bmi-calculator-2 |
+| AMI | ami-04f362ea12d5ad433 | Custom AMI with Apache+PHP+App |
+
+## EC2 Instances
+
+| Name | Instance ID | AZ | Private IP | Status |
+|------|-------------|-----|------------|--------|
+| bmi-calculator | i-02c7b760e6ac58028 | eu-central-1b | 172.31.47.199 | ✅ Healthy |
+| bmi-calculator-2 | i-09a84abf4fb782f8e | eu-central-1a | 172.31.31.207 | ✅ Healthy |
+
+## Health Check Settings
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| Protocol | HTTP | Health check protocol |
+| Path | /bmi/ | Endpoint to check |
+| Port | 80 | Port to check |
+| Interval | 10s | Time between checks |
+| Timeout | 5s | Time to wait for response |
+| Healthy Threshold | 2 | Consecutive successes to mark healthy |
+| Unhealthy Threshold | 2 | Consecutive failures to mark unhealthy |
+| Success Code | 200 | Expected HTTP response code |
+
+## Resiliency Features
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Multi-AZ Deployment | ✅ | Instances in eu-central-1a and eu-central-1b |
+| Load Balancing | ✅ | ALB distributes traffic across instances |
+| Health Checks | ✅ | Automatic detection of failed instances (20s) |
+| Automatic Failover | ✅ | Traffic rerouted to healthy instances |
+| Cross-Zone LB | ✅ | ALB can route to any AZ |
 
 ## Network Details
 
 | Resource | CIDR/IP | Notes |
 |----------|---------|-------|
 | VPC | vpc-04c3e303f1975de6c | Default VPC |
-| Subnet 1a | 172.31.16.0/20 | eu-central-1a |
-| Subnet 1b | 172.31.32.0/20 | eu-central-1b (EC2 location) |
-| Subnet 1c | 172.31.0.0/20 | eu-central-1c |
-| EC2 Private IP | 172.31.47.199 | |
-| EC2 Public IP | 3.78.190.129 | Elastic IP not assigned |
+| Subnet 1a | 172.31.16.0/20 | eu-central-1a (EC2 #2) |
+| Subnet 1b | 172.31.32.0/20 | eu-central-1b (EC2 #1) |
+| Subnet 1c | 172.31.0.0/20 | eu-central-1c (available) |
