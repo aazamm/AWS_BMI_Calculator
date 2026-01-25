@@ -151,9 +151,13 @@ The deployment script installs and configures:
 
 ### Live URLs
 
-- **BMI Calculator**: https://aaronzammit.com/bmi/
-- **Admin Panel**: https://aaronzammit.com/bmi/admin.php
-- **WordPress**: https://aaronzammit.com/
+| Site | URL |
+|------|-----|
+| **WordPress** | https://aaronzammit.com/ |
+| **WordPress Admin** | https://aaronzammit.com/wp-admin/ |
+| **BMI Calculator** | https://aaronzammit.com/bmi/ |
+| **BMI Admin Panel** | https://aaronzammit.com/bmi/admin.php |
+| **Google Analytics** | https://analytics.google.com/ |
 
 ## Admin Panel
 
