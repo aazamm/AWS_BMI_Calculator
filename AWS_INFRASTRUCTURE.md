@@ -71,6 +71,130 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 - **Origin Request Policy:** AllViewer (216adef6-5c7f-47e4-b989-5492eafa07d3)
 - **SSL:** TLSv1.2_2021, SNI
 
+## CloudWatch Agent Monitoring
+
+### Configuration
+- **Namespace:** BMICalculator
+- **Collection Interval:** 60 seconds
+- **Agent Version:** 1.300062.1
+- **Config Location:** `/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json`
+
+### Metrics Collected
+
+| Category | Metrics | Description |
+|----------|---------|-------------|
+| **Memory** | `mem_used_percent`, `mem_available`, `mem_used`, `mem_total` | Memory utilization |
+| **Disk** | `disk_used_percent`, `disk_used`, `disk_total` | Root filesystem usage |
+| **CPU** | `cpu_usage_idle`, `cpu_usage_user`, `cpu_usage_system` | CPU utilization breakdown |
+| **Network** | `netstat_tcp_established`, `netstat_tcp_time_wait` | TCP connection states |
+
+### Dimensions
+All metrics include these dimensions for filtering:
+- `InstanceId` - EC2 instance ID
+- `AutoScalingGroupName` - ASG name (bmi-calculator-asg)
+- Disk metrics also include: `path`, `device`, `fstype`
+
+### Agent Configuration File
+```json
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root"
+  },
+  "metrics": {
+    "namespace": "BMICalculator",
+    "metrics_collected": {
+      "mem": {
+        "measurement": ["mem_used_percent", "mem_available", "mem_used", "mem_total"],
+        "metrics_collection_interval": 60
+      },
+      "disk": {
+        "measurement": ["used_percent", "used", "total"],
+        "metrics_collection_interval": 60,
+        "resources": ["/"]
+      },
+      "cpu": {
+        "measurement": ["cpu_usage_idle", "cpu_usage_user", "cpu_usage_system"],
+        "metrics_collection_interval": 60,
+        "totalcpu": true
+      },
+      "netstat": {
+        "measurement": ["tcp_established", "tcp_time_wait"],
+        "metrics_collection_interval": 60
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    }
+  }
+}
+```
+
+### Installation Commands
+
+```bash
+# Install CloudWatch Agent via SSM
+aws ssm send-command \
+  --instance-ids i-065a560e87bfe8ab6 i-06da8757b133a9679 \
+  --document-name "AWS-RunShellScript" \
+  --parameters 'commands=["sudo yum install -y amazon-cloudwatch-agent"]'
+
+# Write config file (base64 encoded to handle JSON)
+CONFIG_B64="ewogICJhZ2VudCI6IHsKICAgICJtZXRyaWNzX2NvbGxlY3Rpb25faW50ZXJ2YWwiOiA2MCwKICAgICJydW5fYXNfdXNlciI6ICJyb290IgogIH0sCiAgIm1ldHJpY3MiOiB7CiAgICAibmFtZXNwYWNlIjogIkJNSUNhbGN1bGF0b3IiLAogICAgIm1ldHJpY3NfY29sbGVjdGVkIjogewogICAgICAibWVtIjogewogICAgICAgICJtZWFzdXJlbWVudCI6IFsibWVtX3VzZWRfcGVyY2VudCIsICJtZW1fYXZhaWxhYmxlIiwgIm1lbV91c2VkIiwgIm1lbV90b3RhbCJdLAogICAgICAgICJtZXRyaWNzX2NvbGxlY3Rpb25faW50ZXJ2YWwiOiA2MAogICAgICB9LAogICAgICAiZGlzayI6IHsKICAgICAgICAibWVhc3VyZW1lbnQiOiBbInVzZWRfcGVyY2VudCIsICJ1c2VkIiwgInRvdGFsIl0sCiAgICAgICAgIm1ldHJpY3NfY29sbGVjdGlvbl9pbnRlcnZhbCI6IDYwLAogICAgICAgICJyZXNvdXJjZXMiOiBbIi8iXQogICAgICB9LAogICAgICAiY3B1IjogewogICAgICAgICJtZWFzdXJlbWVudCI6IFsiY3B1X3VzYWdlX2lkbGUiLCAiY3B1X3VzYWdlX3VzZXIiLCAiY3B1X3VzYWdlX3N5c3RlbSJdLAogICAgICAgICJtZXRyaWNzX2NvbGxlY3Rpb25faW50ZXJ2YWwiOiA2MCwKICAgICAgICAidG90YWxjcHUiOiB0cnVlCiAgICAgIH0sCiAgICAgICJuZXRzdGF0IjogewogICAgICAgICJtZWFzdXJlbWVudCI6IFsidGNwX2VzdGFibGlzaGVkIiwgInRjcF90aW1lX3dhaXQiXSwKICAgICAgICAibWV0cmljc19jb2xsZWN0aW9uX2ludGVydmFsIjogNjAKICAgICAgfQogICAgfSwKICAgICJhcHBlbmRfZGltZW5zaW9ucyI6IHsKICAgICAgIkluc3RhbmNlSWQiOiAiJHthd3M6SW5zdGFuY2VJZH0iLAogICAgICAiQXV0b1NjYWxpbmdHcm91cE5hbWUiOiAiJHthd3M6QXV0b1NjYWxpbmdHcm91cE5hbWV9IgogICAgfQogIH0KfQo="
+
+aws ssm send-command \
+  --instance-ids i-065a560e87bfe8ab6 i-06da8757b133a9679 \
+  --document-name "AWS-RunShellScript" \
+  --parameters "commands=[\"echo $CONFIG_B64 | base64 -d > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json\"]"
+
+# Start the agent
+aws ssm send-command \
+  --instance-ids i-065a560e87bfe8ab6 i-06da8757b133a9679 \
+  --document-name "AWS-RunShellScript" \
+  --parameters 'commands=["sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"]'
+```
+
+### Verification Commands
+
+```bash
+# Check agent status on instances
+aws ssm send-command \
+  --instance-ids i-065a560e87bfe8ab6 i-06da8757b133a9679 \
+  --document-name "AWS-RunShellScript" \
+  --parameters 'commands=["sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status"]'
+
+# List available metrics
+aws cloudwatch list-metrics --namespace BMICalculator --query 'Metrics[*].MetricName' --output text
+
+# Get memory usage (last hour)
+aws cloudwatch get-metric-statistics \
+  --namespace BMICalculator \
+  --metric-name mem_used_percent \
+  --dimensions Name=InstanceId,Value=i-065a560e87bfe8ab6 Name=AutoScalingGroupName,Value=bmi-calculator-asg \
+  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 \
+  --statistics Average
+
+# Get disk usage
+aws cloudwatch get-metric-statistics \
+  --namespace BMICalculator \
+  --metric-name disk_used_percent \
+  --dimensions Name=InstanceId,Value=i-065a560e87bfe8ab6 Name=AutoScalingGroupName,Value=bmi-calculator-asg Name=path,Value=/ Name=device,Value=nvme0n1p1 Name=fstype,Value=xfs \
+  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 \
+  --statistics Average
+```
+
+### Typical Resource Usage (Baseline)
+| Metric | Instance 1 | Instance 2 |
+|--------|-----------|-----------|
+| Memory | ~39-45% | ~39-42% |
+| Disk | ~29% | ~29% |
+| CPU | <1% idle | <1% idle |
+
 ## Security Groups
 
 ### ALB Security Group (sg-0d78cc17352915ee6)
@@ -276,6 +400,50 @@ aws cloudfront get-distribution-config --id E16YYJ4DT46N17 --output json > cf-co
 # Edit to add CustomHeaders: X-CloudFront-Forwarded-Proto: https
 aws cloudfront update-distribution --id E16YYJ4DT46N17 --distribution-config file://cf-config.json --if-match <ETag>
 ```
+
+### 4xx Errors from Vulnerability Scanners (Expected)
+
+**Issue:** CloudWatch shows intermittent 4xx error rates (sometimes 40-100%) on CloudFront.
+
+**Root Cause:** Automated vulnerability scanners/bots probing for known PHP exploits:
+- PHPUnit RCE (CVE-2017-9841): `/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php`
+- ThinkPHP RCE: `/public/index.php?s=/index/\think\app/invokefunction`
+- PHP PEAR command injection: `/index.php?lang=...pearcmd`
+- Docker API probing: `/containers/json`
+
+**Resolution:** These return 404 (not vulnerable). This is normal internet background noise. No action required.
+
+**Investigation Commands:**
+```bash
+# Check CloudFront 4xx error rate
+aws cloudwatch get-metric-statistics \
+  --region us-east-1 \
+  --namespace AWS/CloudFront \
+  --metric-name 4xxErrorRate \
+  --dimensions Name=DistributionId,Value=E16YYJ4DT46N17 Name=Region,Value=Global \
+  --start-time $(date -u -d '48 hours ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 3600 \
+  --statistics Average
+
+# Check ALB target 4xx errors
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/ApplicationELB \
+  --metric-name HTTPCode_Target_4XX_Count \
+  --dimensions Name=LoadBalancer,Value=app/bmi-calculator-alb/3f95ab9e1d02f57f \
+  --start-time $(date -u -d '48 hours ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 3600 \
+  --statistics Sum
+
+# View Apache access logs via SSM
+aws ssm send-command \
+  --instance-ids i-065a560e87bfe8ab6 \
+  --document-name "AWS-RunShellScript" \
+  --parameters 'commands=["tail -100 /var/log/httpd/access_log | grep -v ELB-HealthChecker"]'
+```
+
+**Optional Mitigation:** Add AWS WAF to block known scanner patterns.
 
 ## Cleanup Commands
 
