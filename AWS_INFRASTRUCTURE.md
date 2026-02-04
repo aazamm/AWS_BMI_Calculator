@@ -13,7 +13,7 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 ### Auto Scaling Group
 - **Name:** bmi-calculator-asg
 - **Min/Desired/Max:** 2 / 2 / 4
-- **Launch Template:** lt-00e9af6830a1fb15c (v5)
+- **Launch Template:** lt-00e9af6830a1fb15c (v6)
 - **AMI:** ami-0b5a0f88c6904cf64
 - **Instance Type:** t3.micro
 - **Availability Zones:** eu-central-1a, eu-central-1b, eu-central-1c
@@ -22,11 +22,11 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 
 ### Launch Template
 - **ID:** lt-00e9af6830a1fb15c
-- **Version:** 5 (with CloudFront HTTPS fix)
+- **Version:** 6 (CloudWatch Agent aggregation_dimensions fix)
 - **AMI:** ami-0b5a0f88c6904cf64
 - **IAM Profile:** CloudWatchAgentProfile
 - **Monitoring:** Detailed (1-minute)
-- **User Data:** CloudWatch Agent installation
+- **User Data:** CloudWatch Agent installation with full metrics and aggregation
 
 ### Google Analytics
 - **Measurement ID:** G-3B3EDTZ0JT
@@ -94,6 +94,9 @@ All metrics include these dimensions for filtering:
 - `AutoScalingGroupName` - ASG name (bmi-calculator-asg)
 - Disk metrics also include: `path`, `device`, `fstype`
 
+### Aggregation Dimensions
+Metrics are also published aggregated by `AutoScalingGroupName` only (without `InstanceId`). This is required for the ASG target tracking scaling policies, which query metrics at the ASG level rather than per-instance.
+
 ### Agent Configuration File
 ```json
 {
@@ -126,7 +129,8 @@ All metrics include these dimensions for filtering:
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}",
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
-    }
+    },
+    "aggregation_dimensions": [["AutoScalingGroupName"]]
   }
 }
 ```
