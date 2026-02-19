@@ -163,11 +163,13 @@ aws elbv2 modify-load-balancer-attributes \
 | 3 | Enable ALB deletion protection | ⏳ Pending | - |
 | 4 | Create EBS snapshot / AMI | ✅ Done | 2026-01-25 |
 | 5 | Enable detailed monitoring | ✅ Done | 2026-01-25 |
-| 6 | Create CloudWatch alarms | ✅ Done | 2026-01-25 |
+| 6 | Create CloudWatch alarms | ✅ Done | 2026-02-20 |
 | 7 | Add second EC2 instance (Multi-AZ) | ✅ Done | 2026-01-25 |
 | 8 | Set up Auto Scaling (CPU + Memory) | ✅ Done | 2026-01-25 |
 | 9 | Enable ALB access logs | ⏳ Pending | - |
-| 10 | Add AWS WAF | ⏳ Pending | - |
+| 10 | Add AWS WAF | ✅ Done | 2026-02-20 |
+| 11 | Intelligent ALB health check | ✅ Done | 2026-02-20 |
+| 12 | SNS alerting topic + email subscription | ✅ Done | 2026-02-20 |
 
 ---
 

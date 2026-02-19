@@ -22,11 +22,11 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 
 ### Launch Template
 - **ID:** lt-00e9af6830a1fb15c
-- **Version:** 6 (CloudWatch Agent aggregation_dimensions fix)
+- **Version:** 8 (intelligent health check endpoint)
 - **AMI:** ami-0b5a0f88c6904cf64
 - **IAM Profile:** CloudWatchAgentProfile
 - **Monitoring:** Detailed (1-minute)
-- **User Data:** CloudWatch Agent installation with full metrics and aggregation
+- **User Data:** CloudWatch Agent installation + intelligent health check deployment
 
 ### Google Analytics
 - **Measurement ID:** G-3B3EDTZ0JT
@@ -57,7 +57,10 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 ### Target Group
 - **Name:** bmi-calculator-tg
 - **ARN:** `arn:aws:elasticloadbalancing:eu-central-1:359345324847:targetgroup/bmi-calculator-tg/cfa5023400e7c504`
-- **Health Check Path:** /bmi/
+- **Health Check Path:** /bmi/health.php
+- **Health Check Type:** Intelligent (checks SQLite, MariaDB, disk, Apache)
+- **Healthy Response:** 200 (all checks pass)
+- **Unhealthy Response:** 503 (any check fails - ALB stops routing traffic)
 - **Protocol:** HTTP:80
 
 ### CloudFront Distribution
@@ -70,6 +73,71 @@ User → CloudFront (CDN/HTTPS) → ALB → Auto Scaling Group (2-4 t3.micro)
 - **Cache Policy:** CachingDisabled (4135ea2d-6df8-44a3-9df3-4b5a84be39ad)
 - **Origin Request Policy:** AllViewer (216adef6-5c7f-47e4-b989-5492eafa07d3)
 - **SSL:** TLSv1.2_2021, SNI
+
+## AWS WAF
+
+### Web ACL
+- **Name:** bmi-calculator-waf
+- **ID:** 7b42b8a6-9b01-43b6-b8f4-fb36304629c2
+- **ARN:** `arn:aws:wafv2:eu-central-1:359345324847:regional/webacl/bmi-calculator-waf/7b42b8a6-9b01-43b6-b8f4-fb36304629c2`
+- **Scope:** REGIONAL
+- **Associated Resource:** bmi-calculator-alb
+
+### Rules
+
+| Priority | Name | Type | Action |
+|----------|------|------|--------|
+| 1 | AWSManagedRulesCommonRuleSet | AWS Managed | Block (default rule actions) |
+| 2 | AWSManagedRulesKnownBadInputsRuleSet | AWS Managed | Block (default rule actions) |
+| 3 | AWSManagedRulesPHPRuleSet | AWS Managed | Block (default rule actions) |
+| 4 | AWSManagedRulesSQLiRuleSet | AWS Managed | Block (default rule actions) |
+| 5 | BlockScannerURIs | Custom | Block |
+| 6 | RateLimitPerIP | Rate-based | Block (2000 req/5min per IP) |
+
+### Custom Rule: BlockScannerURIs
+Blocks known vulnerability scanner patterns:
+- URI contains `/vendor/phpunit` (PHPUnit RCE - CVE-2017-9841)
+- URI contains `/eval-stdin.php`
+- URI contains `/containers/json` (Docker API probing)
+- Query string contains `invokefunction` (ThinkPHP RCE)
+- Query string contains `pearcmd` (PHP PEAR command injection)
+
+## CloudWatch Alarms
+
+### SNS Topic
+- **Name:** bmi-calculator-alerts
+- **ARN:** `arn:aws:sns:eu-central-1:359345324847:bmi-calculator-alerts`
+- **Subscriber:** aazamm@outlook.com (email)
+
+### Operational Alarms
+
+| Alarm | Metric | Namespace | Threshold | Period | Eval Periods |
+|-------|--------|-----------|-----------|--------|-------------|
+| BMI-Calculator-ALB-5xx-Errors | HTTPCode_ELB_5XX_Count | AWS/ApplicationELB | >= 10 (Sum) | 5 min | 1 |
+| BMI-Calculator-Unhealthy-Targets | UnHealthyHostCount | AWS/ApplicationELB | >= 1 (Avg) | 1 min | 2 |
+| BMI-Calculator-High-Latency | TargetResponseTime | AWS/ApplicationELB | > 3s (Avg) | 5 min | 2 |
+| BMI-Calculator-High-CPU | CPUUtilization | AWS/EC2 | > 80% (Avg) | 5 min | 2 |
+| BMI-Calculator-High-Memory | mem_used_percent | BMICalculator | > 80% (Avg) | 5 min | 2 |
+| BMI-Calculator-High-Disk | disk_used_percent | BMICalculator | > 85% (Avg) | 5 min | 2 |
+
+All alarms notify via SNS topic `bmi-calculator-alerts`. Missing data is treated as `notBreaching` for ALB metrics.
+
+## Health Check Endpoint
+
+### /bmi/health.php
+Intelligent health check that verifies the full application stack. Returns JSON response.
+
+**Checks performed:**
+| Check | What it verifies | Failure condition |
+|-------|-----------------|-------------------|
+| sqlite | BMI Calculator SQLite DB is readable | Cannot query visitor_counter table |
+| mariadb | WordPress MariaDB is connectable | Cannot connect or query (creds from wp-config.php) |
+| disk | Root filesystem has space | Disk usage > 90% |
+| apache | httpd process is running | No httpd processes found |
+
+**Response:**
+- **200** `{"healthy":true,"checks":{"sqlite":"ok","mariadb":"ok","disk":"ok","apache":"ok"}}` - All checks pass, ALB routes traffic
+- **503** `{"healthy":false,"checks":{...}}` - Any check fails, ALB stops routing traffic to this instance
 
 ## CloudWatch Agent Monitoring
 
