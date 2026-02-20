@@ -43,19 +43,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Name,Weight,Height,BMI,Date
-";
+        csvContent += "Name,Weight,Height,BMI,Date\n";
 
         currentFilteredHistory.forEach(function(rowArray) {
             let row = [
-                rowArray.name.replace(/,/g, ''),
+                (rowArray.name + ' ' + (rowArray.surname || '')).trim().replace(/,/g, ''),
                 rowArray.weight_kg,
                 rowArray.height_cm,
                 rowArray.bmi,
                 rowArray.created_at.replace(/,/g, '')
             ];
-            csvContent += row.join(",") + "
-";
+            csvContent += row.join(",") + "\n";
         });
 
         const encodedUri = encodeURI(csvContent);
@@ -150,8 +148,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const resData = await response.json();
             if (resData.success) {
+                // If it's a new user, we might want to update the dropdown first
+                await loadHistory();
                 userSelect.value = fullName;
-                loadHistory();
+                loadHistory(); // Reload to filter for this user
             }
         } catch (err) {
             console.error("Failed to save record:", err);
@@ -243,22 +243,73 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- Unit Converters ---
-    const weightInputs = { kg: 'kgInput', lbs: 'lbsInput', gm: 'gmInput', oz: 'ozInput' };
-    const heightInputs = { cm: 'cmInput', m: 'mInput', in: 'inchInput', ft: 'ftInput' };
+    // Weight
+    const kgIn = document.getElementById('kgInput');
+    const lbsIn = document.getElementById('lbsInput');
+    const gmIn = document.getElementById('gmInput');
+    const ozIn = document.getElementById('ozInput');
 
-    document.getElementById('kgInput').addEventListener('input', e => {
-        const kg = e.target.value;
-        if (!kg) return;
-        document.getElementById('lbsInput').value = (kg * 2.20462).toFixed(4);
-        document.getElementById('gmInput').value = (kg * 1000).toFixed(4);
-        document.getElementById('ozInput').value = (kg * 35.274).toFixed(4);
+    kgIn.addEventListener('input', () => {
+        const v = parseFloat(kgIn.value);
+        if (isNaN(v)) { lbsIn.value = gmIn.value = ozIn.value = ''; return; }
+        lbsIn.value = (v * 2.20462).toFixed(4);
+        gmIn.value = (v * 1000).toFixed(4);
+        ozIn.value = (v * 35.274).toFixed(4);
     });
-    document.getElementById('cmInput').addEventListener('input', e => {
-        const cm = e.target.value;
-        if (!cm) return;
-        document.getElementById('mInput').value = (cm * 0.01).toFixed(4);
-        document.getElementById('inchInput').value = (cm * 0.393701).toFixed(4);
-        document.getElementById('ftInput').value = (cm * 0.0328084).toFixed(4);
+    lbsIn.addEventListener('input', () => {
+        const v = parseFloat(lbsIn.value);
+        if (isNaN(v)) { kgIn.value = gmIn.value = ozIn.value = ''; return; }
+        kgIn.value = (v / 2.20462).toFixed(4);
+        gmIn.value = (v * 453.592).toFixed(4);
+        ozIn.value = (v * 16).toFixed(4);
     });
-    // (Simplified other listeners for brevity, can expand if needed)
+    gmIn.addEventListener('input', () => {
+        const v = parseFloat(gmIn.value);
+        if (isNaN(v)) { kgIn.value = lbsIn.value = ozIn.value = ''; return; }
+        kgIn.value = (v / 1000).toFixed(4);
+        lbsIn.value = (v / 453.592).toFixed(4);
+        ozIn.value = (v / 28.3495).toFixed(4);
+    });
+    ozIn.addEventListener('input', () => {
+        const v = parseFloat(ozIn.value);
+        if (isNaN(v)) { kgIn.value = lbsIn.value = gmIn.value = ''; return; }
+        kgIn.value = (v / 35.274).toFixed(4);
+        lbsIn.value = (v / 16).toFixed(4);
+        gmIn.value = (v * 28.3495).toFixed(4);
+    });
+
+    // Height
+    const cmIn = document.getElementById('cmInput');
+    const mIn = document.getElementById('mInput');
+    const inIn = document.getElementById('inchInput');
+    const ftIn = document.getElementById('ftInput');
+
+    cmIn.addEventListener('input', () => {
+        const v = parseFloat(cmIn.value);
+        if (isNaN(v)) { mIn.value = inIn.value = ftIn.value = ''; return; }
+        mIn.value = (v / 100).toFixed(4);
+        inIn.value = (v / 2.54).toFixed(4);
+        ftIn.value = (v / 30.48).toFixed(4);
+    });
+    mIn.addEventListener('input', () => {
+        const v = parseFloat(mIn.value);
+        if (isNaN(v)) { cmIn.value = inIn.value = ftIn.value = ''; return; }
+        cmIn.value = (v * 100).toFixed(4);
+        inIn.value = (v * 39.3701).toFixed(4);
+        ftIn.value = (v * 3.28084).toFixed(4);
+    });
+    inIn.addEventListener('input', () => {
+        const v = parseFloat(inIn.value);
+        if (isNaN(v)) { cmIn.value = mIn.value = ftIn.value = ''; return; }
+        cmIn.value = (v * 2.54).toFixed(4);
+        mIn.value = (v / 39.3701).toFixed(4);
+        ftIn.value = (v / 12).toFixed(4);
+    });
+    ftIn.addEventListener('input', () => {
+        const v = parseFloat(ftIn.value);
+        if (isNaN(v)) { cmIn.value = mIn.value = inIn.value = ''; return; }
+        cmIn.value = (v * 30.48).toFixed(4);
+        mIn.value = (v / 3.28084).toFixed(4);
+        inIn.value = (v * 12).toFixed(4);
+    });
 });
