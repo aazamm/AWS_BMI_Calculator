@@ -1,0 +1,12 @@
+{
+    "apiVersion": 3,
+    "name": "bmi-calculator/bmi-block",
+    "title": "BMI Calculator",
+    "category": "widgets",
+    "icon": "heart",
+    "description": "BMI, BMR, TDEE and Macros calculator with history tracking.",
+    "supports": {
+        "html": false,
+        "multiple": false
+    }
+}
