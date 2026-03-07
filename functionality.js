@@ -1,20 +1,115 @@
 document.addEventListener('DOMContentLoaded', function () {
 
+    // --- Diet Presets ---
+    const DIET_PRESETS = {
+        'balanced':     { protein: 30, carbs: 40, fats: 30 },
+        'keto':         { protein: 20, carbs: 5,  fats: 75 },
+        'paleo':        { protein: 30, carbs: 20, fats: 50 },
+        'high-protein': { protein: 40, carbs: 30, fats: 30 },
+    };
+
+    // --- i18n ---
+    let currentLang = localStorage.getItem('bmi-lang') || 'en';
+
+    function t(key) {
+        if (typeof BMI_TRANSLATIONS !== 'undefined' && BMI_TRANSLATIONS[currentLang] && BMI_TRANSLATIONS[currentLang][key]) {
+            return BMI_TRANSLATIONS[currentLang][key];
+        }
+        if (typeof BMI_TRANSLATIONS !== 'undefined' && BMI_TRANSLATIONS['en'] && BMI_TRANSLATIONS['en'][key]) {
+            return BMI_TRANSLATIONS['en'][key];
+        }
+        return key;
+    }
+
+    function applyTranslations() {
+        // Title
+        const titleEl = document.getElementById('calcTitle');
+        if (titleEl) titleEl.innerText = t('title');
+
+        // Labels
+        const labelMap = {
+            'labelName': 'name', 'labelSurname': 'surname', 'labelAge': 'age',
+            'labelGender': 'gender', 'labelActivity': 'activityLevel',
+            'labelDietType': 'dietType',
+        };
+        Object.entries(labelMap).forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = t(key);
+        });
+
+        // Placeholders
+        const nameEl = document.getElementById('name');
+        const surnameEl = document.getElementById('surname');
+        if (nameEl && nameEl.type !== 'hidden') nameEl.placeholder = t('enterName');
+        if (surnameEl && surnameEl.type !== 'hidden') surnameEl.placeholder = t('enterSurname');
+
+        // Gender options
+        const genderSel = document.getElementById('gender');
+        if (genderSel) {
+            genderSel.options[0].text = t('male');
+            genderSel.options[1].text = t('female');
+        }
+
+        // Activity options
+        const actSel = document.getElementById('activity');
+        if (actSel) {
+            const actKeys = ['sedentary', 'lightlyActive', 'moderatelyActive', 'veryActive', 'extraActive'];
+            actKeys.forEach((key, i) => { if (actSel.options[i]) actSel.options[i].text = t(key); });
+        }
+
+        // Diet type options
+        const dietSel = document.getElementById('dietType');
+        if (dietSel) {
+            const dietKeys = ['balanced', 'keto', 'paleo', 'highProtein'];
+            dietKeys.forEach((key, i) => { if (dietSel.options[i]) dietSel.options[i].text = t(key); });
+        }
+
+        // Buttons
+        const calcBtn = document.getElementById('calcBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        if (calcBtn) calcBtn.innerText = t('calculate');
+        if (clearBtn) clearBtn.innerText = t('clear');
+
+        // Theme button
+        const isDark = document.body.classList.contains('dark-mode');
+        themeBtn.innerText = isDark ? t('lightMode') : t('darkMode');
+
+        // Update macro labels with current diet percentages
+        updateMacroLabels();
+
+        // Result card headings (if visible)
+        document.querySelectorAll('#resultsArea .result-card h4').forEach(h4 => {
+            const text = h4.getAttribute('data-i18n-key');
+            if (text) h4.innerText = t(text);
+        });
+    }
+
     // --- Theme Toggle ---
     const themeBtn = document.getElementById('themeBtn');
     const body = document.body;
 
     if (localStorage.getItem('theme') === 'dark') {
         body.classList.add('dark-mode');
-        themeBtn.innerText = 'Light Mode';
+        themeBtn.innerText = t('lightMode');
     }
 
     themeBtn.addEventListener('click', () => {
         body.classList.toggle('dark-mode');
         const isDark = body.classList.contains('dark-mode');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        themeBtn.innerText = isDark ? 'Light Mode' : 'Dark Mode';
+        themeBtn.innerText = isDark ? t('lightMode') : t('darkMode');
     });
+
+    // --- Language Selector ---
+    const langSelect = document.getElementById('langSelect');
+    if (langSelect) {
+        langSelect.value = currentLang;
+        langSelect.addEventListener('change', () => {
+            currentLang = langSelect.value;
+            localStorage.setItem('bmi-lang', currentLang);
+            applyTranslations();
+        });
+    }
 
     // --- Main Calculator Logic ---
     const calcBtn = document.getElementById('calcBtn');
@@ -58,9 +153,46 @@ document.addEventListener('DOMContentLoaded', function () {
     genderSelect.addEventListener('change', updateHipVisibility);
     updateHipVisibility();
 
+    // --- Diet Type Change ---
+    const dietTypeSelect = document.getElementById('dietType');
+    function getCurrentDiet() {
+        return DIET_PRESETS[dietTypeSelect.value] || DIET_PRESETS['balanced'];
+    }
+
+    function updateMacroLabels() {
+        const diet = getCurrentDiet();
+        const proteinLabel = document.getElementById('proteinLabel');
+        const carbsLabel = document.getElementById('carbsLabel');
+        const fatsLabel = document.getElementById('fatsLabel');
+        if (proteinLabel) proteinLabel.innerText = t('protein') + ' (' + diet.protein + '%)';
+        if (carbsLabel) carbsLabel.innerText = t('carbs') + ' (' + diet.carbs + '%)';
+        if (fatsLabel) fatsLabel.innerText = t('fats') + ' (' + diet.fats + '%)';
+    }
+
+    dietTypeSelect.addEventListener('change', () => {
+        updateMacroLabels();
+        // Recalculate if results are visible
+        if (!resultsArea.classList.contains('hidden')) {
+            recalcMacros();
+        }
+    });
+
+    function recalcMacros() {
+        const tdeeText = document.getElementById('calOutResult').innerText;
+        const tdee = parseFloat(tdeeText);
+        if (isNaN(tdee) || tdee <= 0) return;
+        const diet = getCurrentDiet();
+        document.getElementById('proteinResult').innerText = ((tdee * diet.protein / 100) / 4).toFixed(0) + 'g';
+        document.getElementById('carbsResult').innerText = ((tdee * diet.carbs / 100) / 4).toFixed(0) + 'g';
+        document.getElementById('fatsResult').innerText = ((tdee * diet.fats / 100) / 9).toFixed(0) + 'g';
+    }
+
+    // Apply initial translations
+    applyTranslations();
+
     function exportToCSV() {
         if (currentFilteredHistory.length === 0) {
-            alert("No records to export.");
+            alert(t('noRecords'));
             return;
         }
 
@@ -115,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const activityMultiplier = parseFloat(document.getElementById('activity').value);
 
         if (isNaN(weightInput) || weightInput <= 0 || isNaN(heightInput) || heightInput <= 0 || isNaN(age) || age <= 0) {
-            alert("Please enter valid positive numbers for weight, height, and age.");
+            alert(t('validationError'));
             return;
         }
 
@@ -145,10 +277,12 @@ document.addEventListener('DOMContentLoaded', function () {
             `${minIdealKg.toFixed(1)} - ${maxIdealKg.toFixed(1)} kg`;
         document.getElementById('idealWeightRange').innerText = idealRangeText;
 
-        // Macros
-        document.getElementById('proteinResult').innerText = ((tdee * 0.30) / 4).toFixed(0) + 'g';
-        document.getElementById('carbsResult').innerText = ((tdee * 0.40) / 4).toFixed(0) + 'g';
-        document.getElementById('fatsResult').innerText = ((tdee * 0.30) / 9).toFixed(0) + 'g';
+        // Macros (diet preset driven)
+        const diet = getCurrentDiet();
+        document.getElementById('proteinResult').innerText = ((tdee * diet.protein / 100) / 4).toFixed(0) + 'g';
+        document.getElementById('carbsResult').innerText = ((tdee * diet.carbs / 100) / 4).toFixed(0) + 'g';
+        document.getElementById('fatsResult').innerText = ((tdee * diet.fats / 100) / 9).toFixed(0) + 'g';
+        updateMacroLabels();
 
         // Gauge
         let percent = ((bmiValue - 15) / (40 - 15)) * 100;
@@ -158,10 +292,10 @@ document.addEventListener('DOMContentLoaded', function () {
         let statusClass = "";
         let commentText = "";
 
-        if (bmiValue < 18.5) { commentText = "Underweight"; statusClass = "status-underweight"; }
-        else if (bmiValue <= 24.9) { commentText = "Normal weight"; statusClass = "status-normal"; }
-        else if (bmiValue < 30) { commentText = "Overweight"; statusClass = "status-overweight"; }
-        else { commentText = "Obese"; statusClass = "status-obese"; }
+        if (bmiValue < 18.5) { commentText = t('underweight'); statusClass = "status-underweight"; }
+        else if (bmiValue <= 24.9) { commentText = t('normal'); statusClass = "status-normal"; }
+        else if (bmiValue < 30) { commentText = t('overweight'); statusClass = "status-overweight"; }
+        else { commentText = t('obese'); statusClass = "status-obese"; }
 
         commentEl.innerText = commentText;
         commentEl.className = "result-value " + statusClass;
@@ -232,9 +366,9 @@ document.addEventListener('DOMContentLoaded', function () {
             idealRange: idealRangeText, gender: gender,
             bodyFatPct: bodyFatPct ? bodyFatPct.toFixed(1) : null,
             whtr: whtr ? whtr.toFixed(3) : null,
-            protein: ((tdee * 0.30) / 4).toFixed(0) + 'g',
-            carbs: ((tdee * 0.40) / 4).toFixed(0) + 'g',
-            fats: ((tdee * 0.30) / 9).toFixed(0) + 'g',
+            protein: ((tdee * diet.protein / 100) / 4).toFixed(0) + 'g',
+            carbs: ((tdee * diet.carbs / 100) / 4).toFixed(0) + 'g',
+            fats: ((tdee * diet.fats / 100) / 9).toFixed(0) + 'g',
         };
 
         // Save goal weight if set
@@ -494,6 +628,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('age').value = "";
         document.getElementById('gender').value = "male";
         document.getElementById('activity').value = "1.2";
+        document.getElementById('dietType').value = "balanced";
+        updateMacroLabels();
         const neckEl = document.getElementById('neckCirc');
         const waistEl = document.getElementById('waistCirc');
         const hipEl = document.getElementById('hipCirc');

@@ -1,7 +1,7 @@
 # AWS BMI Calculator - URL Reference
 
 **Domain:** aaronzammit.com
-**Last verified:** 2026-02-21
+**Last verified:** 2026-03-07
 
 ---
 
@@ -32,10 +32,13 @@
 
 ### WordPress REST API
 
-| Method | URL | Description |
-|--------|-----|-------------|
-| GET | https://aaronzammit.com/index.php/wp-json/bmi-calculator/v1/history | Retrieve all BMI records (JSON array) |
-| POST | https://aaronzammit.com/index.php/wp-json/bmi-calculator/v1/record | Save a new BMI record |
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| GET | https://aaronzammit.com/index.php/wp-json/bmi-calculator/v1/history | None | Retrieve all BMI records (JSON array) |
+| POST | https://aaronzammit.com/index.php/wp-json/bmi-calculator/v1/record | None | Save a new BMI record (guest) |
+| POST | https://aaronzammit.com/index.php/wp-json/bmi-calculator/v1/lead | None | Submit lead capture email |
+| POST | https://aaronzammit.com/index.php/wp-json/bmi-calculator/v1/user-record | WP Login | Save BMI record for logged-in user (stored in user meta) |
+| GET | https://aaronzammit.com/index.php/wp-json/bmi-calculator/v1/user-history | WP Login | Get personal BMI history from user meta |
 
 **Alternative query-string format** (same functionality):
 
@@ -65,12 +68,30 @@
 }
 ```
 
-### Standalone API (Legacy)
+**POST `/lead` request body** (JSON):
+```json
+{
+  "email": "user@example.com",
+  "name": "John",
+  "bmi": 24.49
+}
+```
+
+**POST `/user-record` request body** (JSON, requires WP login + X-WP-Nonce):
+```json
+{
+  "weight_kg": "75.00",
+  "height_cm": "175.00"
+}
+```
+
+### Standalone API
 
 | Method | URL | Description |
 |--------|-----|-------------|
-| GET | https://aaronzammit.com/bmi/index.php?action=get_history | Retrieve BMI records from standalone app |
-| POST | https://aaronzammit.com/bmi/index.php | Save a record (same JSON body as REST API above, with `"action": "save"`) |
+| GET | https://aaronzammit.com/bmi/index.php?action=get_history | Retrieve BMI records |
+| GET | https://aaronzammit.com/bmi/index.php?action=get_goal | Get user's goal weight (requires login) |
+| POST | https://aaronzammit.com/bmi/index.php | Save a record (`"action": "save"`) or set goal (`"action": "set_goal"`) |
 
 ---
 

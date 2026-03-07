@@ -1,20 +1,74 @@
 # AWS BMI Calculator
 
-A standalone PHP web application that calculates Body Mass Index (BMI) and stores user records in a SQLite database. Deployed on AWS with CloudFront CDN, Application Load Balancer, and Auto Scaling for high availability.
+A full-featured BMI, BMR, TDEE, and macronutrient calculator available as both a standalone PHP web app and a WordPress Gutenberg block plugin. Deployed on AWS with CloudFront CDN, Application Load Balancer, and Auto Scaling for high availability.
 
-**Live URL:** https://aaronzammit.com/bmi/
+## Live URLs
+
+| Application | URL |
+|-------------|-----|
+| **Standalone BMI Calculator** | https://aaronzammit.com/bmi/ |
+| **WordPress BMI Calculator** | https://aaronzammit.com/index.php/bmi-calculator/ |
+| **WordPress Admin** | https://aaronzammit.com/wp-admin/ |
+| **BMI Admin Panel** | https://aaronzammit.com/bmi/admin.php |
+| **Health Check** | https://aaronzammit.com/bmi/health.php |
 
 ## Features
 
-- Calculate BMI from weight (kg) and height (cm)
-- Store records: Name, Surname, Weight, Height, BMI, and timestamp
-- View all previous calculations in a table
-- BMI category classification (Underweight, Normal weight, Overweight, Obese)
-- Lightweight SQLite database (no external DB server needed for the calculator)
-- Visitor counter (tracks total page visits)
-- Soft-delete: hide records from public view while keeping them in the database
-- Admin panel with HTTP Basic Authentication to view and manage all records
-- **Google Analytics** integration for traffic and audience insights
+### Core Calculator
+- BMI calculation with visual gauge and category classification
+- BMR (Basal Metabolic Rate) and TDEE (Total Daily Energy Expenditure) calculation
+- Daily macronutrient guide (protein, carbs, fats in grams)
+- Body Fat % estimation via Navy Method (neck/waist/hip measurements)
+- Waist-to-Height Ratio (WHtR) health indicator
+- Weight velocity tracking and goal date projection
+- Interactive BMI progress chart (Chart.js)
+- Downloadable PDF health report (jsPDF)
+- Advanced real-time unit converter (weight and height)
+
+### Dietary Preference Presets
+A "Diet Type" selector auto-adjusts macronutrient percentages:
+
+| Diet Type | Protein | Carbs | Fats |
+|-----------|---------|-------|------|
+| Balanced (default) | 30% | 40% | 30% |
+| Keto | 20% | 5% | 75% |
+| Paleo | 30% | 20% | 50% |
+| High Protein | 40% | 30% | 30% |
+
+Selecting a preset immediately recalculates macro grams if results are visible. The WordPress block editor includes a Diet Type selector that auto-updates the macro ratio sliders.
+
+### Accessibility (WCAG AA)
+- `aria-label` and `aria-required` on all form inputs
+- `role="status"` and `aria-live="polite"` on results area for screen reader announcements
+- `role="img"` with descriptive `aria-label` on the BMI gauge
+- Visible `:focus-visible` outlines on all interactive elements
+- Skip link for keyboard navigation
+- Dark mode contrast fixes: status colors lightened to meet 4.5:1 contrast ratio
+- `.result-subtext` uses CSS variable instead of hardcoded `#777`
+
+### Multi-language Support (i18n)
+- **Native app:** Client-side i18n with language selector (English, Spanish, French). All ~50 user-facing strings externalized in `lang.js`. Language preference persists via localStorage.
+- **WordPress plugin:** All PHP strings wrapped with `__()` / `esc_html__()` for WP i18n. JS strings passed via `wp_localize_script`. POT translation template included at `languages/bmi-calculator-block.pot`.
+
+### User Management & History
+- User authentication (login/signup) with personal history tracking
+- Per-user record filtering and chart display
+- Goal weight setting with projected goal date
+- CSV export of filtered records
+- Visitor counter
+
+### WordPress Plugin Features
+- Gutenberg block with sidebar controls (accent color, history toggle, converter toggle, macro ratios, diet type)
+- Shortcode support: `[bmi_calculator]` with all block attributes
+- Lead capture form with email opt-in (shown after calculation)
+- REST API for record management
+- WP user integration (auto-fill name, personal history via user meta)
+- Extensibility hooks and filters (`bmi_calculator_form_fields`, `bmi_calculator_results_html`, etc.)
+
+### Admin & Monitoring
+- Admin panel with HTTP Basic Authentication
+- Soft-delete records (hide/unhide)
+- **Google Analytics** integration for traffic insights
 
 ## Tech Stack
 
@@ -46,13 +100,38 @@ Internet → Cloudflare DNS → CloudFront (HTTPS) → ALB → Auto Scaling Grou
 
 ```
 .
-├── index.php          # Main application - form, BMI calculation, results display
-├── admin.php          # Admin panel - view all records, hide/unhide (password protected)
-├── db.php             # Database layer - SQLite connection, CRUD operations
-├── style.css          # Application styling
-├── deploy.sh          # Automated deployment script for EC2
-├── SETUP_STEPS.md     # Detailed step-by-step setup commands
-└── README.md          # This file
+├── index.php              # Main application - form, BMI calculation, results display
+├── functionality.js       # Calculator logic, diet presets, i18n, chart, PDF report
+├── lang.js                # Translation dictionary (en, es, fr)
+├── style.css              # Application styling with a11y and dark mode support
+├── auth.php               # User authentication (login/signup)
+├── login.php              # Login/signup page
+├── admin.php              # Admin panel - view all records, hide/unhide (password protected)
+├── db.php                 # Database layer - SQLite connection, CRUD operations
+├── health.php             # ALB health check endpoint
+├── deploy.sh              # Automated deployment script for EC2
+├── manifest.json          # PWA manifest
+├── sw.js                  # Service worker for PWA
+├── wordpress-plugin/
+│   ├── bmi-calculator-block.php   # Plugin main file - block registration, rendering, i18n
+│   ├── block/
+│   │   ├── block.json             # Block metadata and attributes (incl. dietType)
+│   │   └── editor.js              # Gutenberg editor controls
+│   ├── assets/
+│   │   ├── js/bmi-functionality.js  # Front-end calculator logic with diet presets & i18n
+│   │   └── css/bmi-style.css        # Scoped styles with a11y and dark mode fixes
+│   ├── includes/
+│   │   ├── db.php                 # WordPress SQLite database operations
+│   │   ├── rest-api.php           # REST API endpoints (record, history, lead, user)
+│   │   ├── leads.php              # Lead capture table management
+│   │   └── admin.php              # WP admin leads page
+│   ├── languages/
+│   │   └── bmi-calculator-block.pot  # Translation template for translators
+│   └── DEPLOYMENT.md             # WordPress plugin deployment guide
+├── URLS.md                # Full URL reference for all endpoints
+├── ARCHITECTURE.md        # AWS architecture documentation
+├── SETUP_STEPS.md         # Detailed step-by-step setup commands
+└── README.md              # This file
 ```
 
 ## BMI Formula
@@ -153,11 +232,33 @@ The deployment script installs and configures:
 
 | Site | URL |
 |------|-----|
-| **WordPress** | https://aaronzammit.com/ |
+| **Standalone BMI Calculator** | https://aaronzammit.com/bmi/ |
+| **WordPress BMI Calculator** | https://aaronzammit.com/index.php/bmi-calculator/ |
+| **WordPress Home** | https://aaronzammit.com/ |
 | **WordPress Admin** | https://aaronzammit.com/wp-admin/ |
-| **BMI Calculator** | https://aaronzammit.com/bmi/ |
 | **BMI Admin Panel** | https://aaronzammit.com/bmi/admin.php |
+| **Health Check** | https://aaronzammit.com/bmi/health.php |
 | **Google Analytics** | https://analytics.google.com/ |
+
+### REST API Endpoints (WordPress)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/wp-json/bmi-calculator/v1/history` | Retrieve all BMI records |
+| POST | `/wp-json/bmi-calculator/v1/record` | Save a new BMI record |
+| POST | `/wp-json/bmi-calculator/v1/lead` | Submit lead capture email |
+| POST | `/wp-json/bmi-calculator/v1/user-record` | Save record for logged-in user |
+| GET | `/wp-json/bmi-calculator/v1/user-history` | Get personal history (logged-in) |
+
+### Standalone API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/bmi/index.php?action=get_history` | Retrieve BMI records |
+| GET | `/bmi/index.php?action=get_goal` | Get user's goal weight |
+| POST | `/bmi/index.php` | Save record or set goal (`action: save` / `action: set_goal`) |
+
+See [URLS.md](URLS.md) for the complete URL reference including infrastructure endpoints.
 
 ## Admin Panel
 

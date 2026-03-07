@@ -8,5 +8,35 @@
     "supports": {
         "html": false,
         "multiple": false
+    },
+    "attributes": {
+        "primaryColor": {
+            "type": "string",
+            "default": "#0073aa"
+        },
+        "showHistory": {
+            "type": "boolean",
+            "default": true
+        },
+        "showConverter": {
+            "type": "boolean",
+            "default": true
+        },
+        "macroProtein": {
+            "type": "number",
+            "default": 30
+        },
+        "macroCarbs": {
+            "type": "number",
+            "default": 40
+        },
+        "macroFats": {
+            "type": "number",
+            "default": 30
+        },
+        "dietType": {
+            "type": "string",
+            "default": "balanced"
+        }
     }
 }

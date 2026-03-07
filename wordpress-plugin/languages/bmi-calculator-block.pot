@@ -1,0 +1,318 @@
+# Copyright (C) 2024 Aaron Zammit
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: BMI Calculator Block 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-07 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Claude Code\n"
+"X-Domain: bmi-calculator-block\n"
+
+#: bmi-calculator-block.php
+msgid "Skip to calculator"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Toggle dark mode"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Dark Mode"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "BMI Calculator"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Name"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Enter your name"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Your name"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Surname"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Enter your surname"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Your surname"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Age"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Age in years"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Gender"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Male"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Female"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Activity Level"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Activity level"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Sedentary (little or no exercise)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Lightly active (light exercise/sports 1-3 days/week)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Moderately active (moderate exercise/sports 3-5 days/week)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Very active (hard exercise/sports 6-7 days a week)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Extra active (very hard exercise/sports & physical job)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Diet Type"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Diet type"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Balanced"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Keto"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Paleo"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "High Protein"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Weight"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Weight value"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Weight unit"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Height"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Height value"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Height unit"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "inches"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Calculate BMI"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Calculate"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Clear form"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Clear"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Body Mass Index"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "BMI gauge showing current value"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Health Status"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Ideal"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Basal Metabolic Rate (BMR)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "kcal / day (Resting)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Daily Energy Needs (TDEE)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "kcal / day (Active)"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Daily Macronutrient Guide"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Protein"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Carbs"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Fats"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Get personalized health tips — enter your email"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Email address"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Agree to receive health tips via email"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "I agree to receive health tips via email"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Subscribe"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Previous Records"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "View records for:"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "All Users"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Export CSV"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Date"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Advanced Real-Time Unit Converter"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Weight Converter"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Height Converter"
+msgstr ""
+
+#: bmi-calculator-block.php
+msgid "Visitors"
+msgstr ""
+
+#. JS strings passed via wp_localize_script
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Underweight"
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Normal weight"
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Overweight"
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Obese"
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "No records to export."
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Please enter valid positive numbers for weight, height, and age."
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Please agree to receive emails first."
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Please enter a valid email address."
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Network error. Please try again."
+msgstr ""
+
+#: bmi-calculator-block.php (wp_localize_script)
+msgid "Light Mode"
+msgstr ""

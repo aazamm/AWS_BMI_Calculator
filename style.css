@@ -55,6 +55,23 @@ h1 {
     margin-bottom: 10px;
 }
 
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lang-toggle select {
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    width: auto;
+}
+
 .theme-toggle {
     /* no longer absolutely positioned */
 }
@@ -242,7 +259,7 @@ button {
 
 .result-subtext {
     font-size: 12px;
-    color: #777;
+    color: var(--text-secondary);
     margin-top: 5px;
 }
 
@@ -323,6 +340,43 @@ button {
 .status-normal { color: #27ae60; }
 .status-overweight { color: #e67e22; }
 .status-obese { color: #c0392b; }
+
+body.dark-mode .status-underweight { color: #f5b041; }
+body.dark-mode .status-overweight { color: #eb984e; }
+
+/* Focus styles for accessibility */
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* Skip link */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: 100;
+    padding: 10px 15px;
+    background: var(--accent-color);
+    color: #fff;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: auto;
+    height: auto;
+    overflow: visible;
+}
 
 .divider {
     border: 0;

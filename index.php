@@ -86,9 +86,19 @@ $visitorCount = incrementVisitorCount();
 </head>
 <body>
     <div class="container">
+        <a class="skip-link" href="#calcBtn">Skip to calculator</a>
         <div class="top-bar">
-            <div class="theme-toggle">
-                <button id="themeBtn">Dark Mode</button>
+            <div class="top-bar-left">
+                <div class="theme-toggle">
+                    <button id="themeBtn" aria-label="Toggle dark mode">Dark Mode</button>
+                </div>
+                <div class="lang-toggle">
+                    <select id="langSelect" aria-label="Select language">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                    </select>
+                </div>
             </div>
             <div class="auth-bar">
                 <?php if ($currentUser): ?>
@@ -100,16 +110,16 @@ $visitorCount = incrementVisitorCount();
                 <?php endif; ?>
             </div>
         </div>
-        <h1>BMI Calculator</h1>
+        <h1 id="calcTitle">BMI Calculator</h1>
 
         <?php if (!$currentUser): ?>
         <div class="form-group">
-            <label for="name">Name</label>
-            <input type="text" id="name" placeholder="Enter your name">
+            <label for="name" id="labelName">Name</label>
+            <input type="text" id="name" placeholder="Enter your name" aria-label="Your name">
         </div>
         <div class="form-group">
-            <label for="surname">Surname</label>
-            <input type="text" id="surname" placeholder="Enter your surname">
+            <label for="surname" id="labelSurname">Surname</label>
+            <input type="text" id="surname" placeholder="Enter your surname" aria-label="Your surname">
         </div>
         <?php else: ?>
         <input type="hidden" id="name" value="<?= htmlspecialchars($currentUser['display_name']) ?>">
@@ -118,12 +128,12 @@ $visitorCount = incrementVisitorCount();
 
         <div class="form-row">
             <div class="form-group half-width">
-                <label for="age">Age</label>
-                <input type="number" id="age" min="1" max="120" placeholder="e.g. 25">
+                <label for="age" id="labelAge">Age</label>
+                <input type="number" id="age" min="1" max="120" placeholder="e.g. 25" aria-label="Age in years" aria-required="true">
             </div>
             <div class="form-group half-width">
-                <label for="gender">Gender</label>
-                <select id="gender">
+                <label for="gender" id="labelGender">Gender</label>
+                <select id="gender" aria-label="Gender">
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                 </select>
@@ -131,8 +141,8 @@ $visitorCount = incrementVisitorCount();
         </div>
 
         <div class="form-group">
-            <label for="activity">Activity Level</label>
-            <select id="activity">
+            <label for="activity" id="labelActivity">Activity Level</label>
+            <select id="activity" aria-label="Activity level">
                 <option value="1.2">Sedentary (little or no exercise)</option>
                 <option value="1.375">Lightly active (light exercise/sports 1-3 days/week)</option>
                 <option value="1.55">Moderately active (moderate exercise/sports 3-5 days/week)</option>
@@ -140,13 +150,23 @@ $visitorCount = incrementVisitorCount();
                 <option value="1.9">Extra active (very hard exercise/sports & physical job)</option>
             </select>
         </div>
+
+        <div class="form-group">
+            <label for="dietType" id="labelDietType">Diet Type</label>
+            <select id="dietType" aria-label="Diet type">
+                <option value="balanced">Balanced</option>
+                <option value="keto">Keto</option>
+                <option value="paleo">Paleo</option>
+                <option value="high-protein">High Protein</option>
+            </select>
+        </div>
         
         <div class="form-row">
             <div class="form-group half-width">
                 <label for="mainWeight">Weight</label>
                 <div class="input-group">
-                    <input type="number" id="mainWeight" step="0.1" min="1" placeholder="e.g. 70">
-                    <select id="weightUnit">
+                    <input type="number" id="mainWeight" step="0.1" min="1" placeholder="e.g. 70" aria-label="Weight value" aria-required="true">
+                    <select id="weightUnit" aria-label="Weight unit">
                         <option value="kg">kg</option>
                         <option value="lbs">lbs</option>
                     </select>
@@ -155,8 +175,8 @@ $visitorCount = incrementVisitorCount();
             <div class="form-group half-width">
                 <label for="mainHeight">Height</label>
                 <div class="input-group">
-                    <input type="number" id="mainHeight" step="0.1" min="1" placeholder="e.g. 175">
-                    <select id="heightUnit">
+                    <input type="number" id="mainHeight" step="0.1" min="1" placeholder="e.g. 175" aria-label="Height value" aria-required="true">
+                    <select id="heightUnit" aria-label="Height unit">
                         <option value="cm">cm</option>
                         <option value="in">inches</option>
                     </select>
@@ -178,7 +198,7 @@ $visitorCount = incrementVisitorCount();
             </div>
             <div class="form-group" id="hipGroup">
                 <label for="hipCirc">Hip Circumference (cm) <span id="hipNote">(required for female)</span></label>
-                <input type="number" id="hipCirc" step="0.1" min="1" placeholder="e.g. 95">
+                <input type="number" id="hipCirc" step="0.1" min="1" placeholder="e.g. 95" aria-label="Hip circumference in centimeters">
             </div>
         </details>
 
@@ -196,15 +216,15 @@ $visitorCount = incrementVisitorCount();
         <?php endif; ?>
 
         <div class="button-group">
-            <button id="calcBtn" class="btn-primary">Calculate</button>
-            <button id="clearBtn" class="btn-secondary">Clear</button>
+            <button id="calcBtn" class="btn-primary" aria-label="Calculate BMI">Calculate</button>
+            <button id="clearBtn" class="btn-secondary" aria-label="Clear form">Clear</button>
         </div>
 
-        <div id="resultsArea" class="results-grid hidden">
+        <div id="resultsArea" class="results-grid hidden" role="status" aria-live="polite">
             <div class="result-card" id="bmiCard">
                 <h4>Body Mass Index</h4>
                 <div class="result-value" id="bmiResult">--</div>
-                <div class="gauge-container">
+                <div class="gauge-container" role="img" aria-label="BMI gauge showing current value">
                     <div class="gauge-bar">
                         <div id="gaugePointer" class="gauge-pointer"></div>
                     </div>
@@ -236,15 +256,15 @@ $visitorCount = incrementVisitorCount();
                 <h4>Daily Macronutrient Guide</h4>
                 <div class="macros-grid">
                     <div class="macro-item">
-                        <span class="macro-label">Protein (30%)</span>
+                        <span class="macro-label" id="proteinLabel">Protein (30%)</span>
                         <span class="macro-value" id="proteinResult">--</span>
                     </div>
                     <div class="macro-item">
-                        <span class="macro-label">Carbs (40%)</span>
+                        <span class="macro-label" id="carbsLabel">Carbs (40%)</span>
                         <span class="macro-value" id="carbsResult">--</span>
                     </div>
                     <div class="macro-item">
-                        <span class="macro-label">Fats (30%)</span>
+                        <span class="macro-label" id="fatsLabel">Fats (30%)</span>
                         <span class="macro-value" id="fatsResult">--</span>
                     </div>
                 </div>
@@ -346,6 +366,7 @@ $visitorCount = incrementVisitorCount();
             'email' => $currentUser['email'],
         ] : null) ?>;
     </script>
+    <script src="lang.js"></script>
     <script src="functionality.js"></script>
     <script>
     if ('serviceWorker' in navigator) {
