@@ -4,15 +4,15 @@ header("Content-Type: application/json");
 $checks = [];
 $healthy = true;
 
-// 1. SQLite - BMI Calculator database
+// 1. PostgreSQL - BMI Calculator database (shared RDS)
 try {
-    $dbPath = __DIR__ . '/bmi_data.db';
-    $db = new SQLite3($dbPath);
-    $db->querySingle('SELECT count FROM visitor_counter WHERE id = 1');
-    $db->close();
-    $checks['sqlite'] = 'ok';
+    require_once __DIR__ . '/db.php';
+    $db = getDB();
+    $stmt = $db->query('SELECT count FROM visitor_counter WHERE id = 1');
+    $stmt->fetch();
+    $checks['postgresql'] = 'ok';
 } catch (Exception $e) {
-    $checks['sqlite'] = 'fail';
+    $checks['postgresql'] = 'fail';
     $healthy = false;
 }
 

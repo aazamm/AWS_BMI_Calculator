@@ -12,8 +12,8 @@ set -e
 echo "=== Updating system packages ==="
 dnf update -y
 
-echo "=== Installing Apache, PHP, SQLite, and MariaDB ==="
-dnf install -y httpd php php-mysqlnd php-sqlite3 php-mbstring php-xml php-gd \
+echo "=== Installing Apache, PHP, PostgreSQL driver, and MariaDB ==="
+dnf install -y httpd php php-mysqlnd php-pgsql php-sqlite3 php-mbstring php-xml php-gd \
     mariadb105-server sqlite wget unzip
 
 echo "=== Starting and enabling services ==="
@@ -68,7 +68,19 @@ echo "=== Deploying BMI Calculator ==="
 mkdir -p /var/www/html/bmi
 cp /tmp/bmi-calculator/index.php /var/www/html/bmi/
 cp /tmp/bmi-calculator/db.php /var/www/html/bmi/
+cp /tmp/bmi-calculator/auth.php /var/www/html/bmi/
+cp /tmp/bmi-calculator/login.php /var/www/html/bmi/
 cp /tmp/bmi-calculator/style.css /var/www/html/bmi/
+cp /tmp/bmi-calculator/functionality.js /var/www/html/bmi/
+cp /tmp/bmi-calculator/health.php /var/www/html/bmi/
+cp /tmp/bmi-calculator/admin.php /var/www/html/bmi/
+
+# BMI Calculator database credentials
+cat > /var/www/html/bmi/.env <<'BMIENV'
+DATABASE_URL=postgresql://bmi_user:bmi_61b9214b00a9663db38e8b4f@financial-rss-db.cbmw40ai0tgk.eu-central-1.rds.amazonaws.com:5432/bmi_calculator
+SESSION_SECRET=CHANGE_ME_ON_DEPLOY
+BMIENV
+chmod 600 /var/www/html/bmi/.env
 
 echo "=== Setting permissions ==="
 chown -R apache:apache /var/www/html

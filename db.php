@@ -1,96 +1,116 @@
 <?php
 
-function getDB(): SQLite3 {
-    $dbPath = __DIR__ . '/bmi_data.db';
-    $db = new SQLite3($dbPath);
-    $db->exec('CREATE TABLE IF NOT EXISTS bmi_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        surname TEXT NOT NULL,
-        weight_kg REAL NOT NULL,
-        height_cm REAL NOT NULL,
-        bmi REAL NOT NULL,
-        hidden INTEGER NOT NULL DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )');
-    // Add hidden column if missing (existing databases)
-    $columns = $db->query("PRAGMA table_info(bmi_records)");
-    $hasHidden = false;
-    while ($col = $columns->fetchArray(SQLITE3_ASSOC)) {
-        if ($col['name'] === 'hidden') $hasHidden = true;
+function getDB(): PDO {
+    static $pdo = null;
+    if ($pdo !== null) return $pdo;
+
+    // Load credentials from environment or .env file
+    $dbUrl = getenv('DATABASE_URL');
+    if (!$dbUrl) {
+        $envFile = __DIR__ . '/.env';
+        if (file_exists($envFile)) {
+            foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+                if (str_starts_with($line, '#')) continue;
+                if (str_contains($line, '=')) {
+                    [$key, $val] = explode('=', $line, 2);
+                    putenv(trim($key) . '=' . trim($val));
+                }
+            }
+            $dbUrl = getenv('DATABASE_URL');
+        }
     }
-    if (!$hasHidden) {
-        $db->exec('ALTER TABLE bmi_records ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0');
+
+    if (!$dbUrl) {
+        throw new RuntimeException('DATABASE_URL not set');
     }
-    $db->exec('CREATE TABLE IF NOT EXISTS visitor_counter (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        count INTEGER NOT NULL DEFAULT 0
-    )');
-    $db->exec('INSERT OR IGNORE INTO visitor_counter (id, count) VALUES (1, 0)');
-    return $db;
+
+    $parts = parse_url($dbUrl);
+    $dsn = sprintf('pgsql:host=%s;port=%s;dbname=%s',
+        $parts['host'],
+        $parts['port'] ?? 5432,
+        ltrim($parts['path'], '/')
+    );
+
+    $pdo = new PDO($dsn, $parts['user'], $parts['pass'] ?? '', [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+
+    return $pdo;
 }
 
 function incrementVisitorCount(): int {
     $db = getDB();
     $db->exec('UPDATE visitor_counter SET count = count + 1 WHERE id = 1');
-    $result = $db->querySingle('SELECT count FROM visitor_counter WHERE id = 1');
-    $db->close();
-    return (int) $result;
+    $stmt = $db->query('SELECT count FROM visitor_counter WHERE id = 1');
+    return (int) $stmt->fetchColumn();
 }
 
-function saveRecord(string $name, string $surname, float $weightKg, float $heightCm): array {
+function saveRecord(
+    string $name,
+    string $surname,
+    float $weightKg,
+    float $heightCm,
+    ?int $userId = null,
+    ?string $gender = null,
+    ?float $neckCm = null,
+    ?float $waistCm = null,
+    ?float $hipCm = null,
+    ?float $bodyFatPct = null,
+    ?float $whtr = null
+): array {
     $heightM = $heightCm / 100;
     $bmi = round($weightKg / ($heightM * $heightM), 2);
 
     $db = getDB();
-    $stmt = $db->prepare('INSERT INTO bmi_records (name, surname, weight_kg, height_cm, bmi) VALUES (:name, :surname, :weight, :height, :bmi)');
-    $stmt->bindValue(':name', $name, SQLITE3_TEXT);
-    $stmt->bindValue(':surname', $surname, SQLITE3_TEXT);
-    $stmt->bindValue(':weight', $weightKg, SQLITE3_FLOAT);
-    $stmt->bindValue(':height', $heightCm, SQLITE3_FLOAT);
-    $stmt->bindValue(':bmi', $bmi, SQLITE3_FLOAT);
-    $stmt->execute();
-    $db->close();
+    $stmt = $db->prepare('INSERT INTO bmi_records (name, surname, weight_kg, height_cm, bmi, user_id, gender, neck_cm, waist_cm, hip_cm, body_fat_pct, whtr) VALUES (:name, :surname, :weight, :height, :bmi, :user_id, :gender, :neck_cm, :waist_cm, :hip_cm, :body_fat_pct, :whtr)');
+    $stmt->execute([
+        ':name' => $name,
+        ':surname' => $surname,
+        ':weight' => $weightKg,
+        ':height' => $heightCm,
+        ':bmi' => $bmi,
+        ':user_id' => $userId,
+        ':gender' => $gender,
+        ':neck_cm' => $neckCm,
+        ':waist_cm' => $waistCm,
+        ':hip_cm' => $hipCm,
+        ':body_fat_pct' => $bodyFatPct,
+        ':whtr' => $whtr,
+    ]);
 
     return ['bmi' => $bmi, 'category' => getBMICategory($bmi)];
 }
 
 function getRecords(): array {
     $db = getDB();
-    $results = $db->query('SELECT * FROM bmi_records WHERE hidden = 0 ORDER BY created_at DESC');
-    $records = [];
-    while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-        $records[] = $row;
-    }
-    $db->close();
-    return $records;
+    $stmt = $db->query('SELECT * FROM bmi_records WHERE hidden = 0 ORDER BY created_at DESC');
+    return $stmt->fetchAll();
+}
+
+function getRecordsByUser(int $userId): array {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM bmi_records WHERE user_id = :uid AND hidden = 0 ORDER BY created_at DESC');
+    $stmt->execute([':uid' => $userId]);
+    return $stmt->fetchAll();
 }
 
 function getAllRecords(): array {
     $db = getDB();
-    $results = $db->query('SELECT * FROM bmi_records ORDER BY created_at DESC');
-    $records = [];
-    while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-        $records[] = $row;
-    }
-    $db->close();
-    return $records;
+    $stmt = $db->query('SELECT * FROM bmi_records ORDER BY created_at DESC');
+    return $stmt->fetchAll();
 }
 
 function hideRecord(int $id): void {
     $db = getDB();
     $stmt = $db->prepare('UPDATE bmi_records SET hidden = 1 WHERE id = :id');
-    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
-    $stmt->execute();
-    $db->close();
+    $stmt->execute([':id' => $id]);
 }
 
 function unhideRecord(int $id): void {
     $db = getDB();
     $stmt = $db->prepare('UPDATE bmi_records SET hidden = 0 WHERE id = :id');
-    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
-    $stmt->execute();
-    $db->close();
+    $stmt->execute([':id' => $id]);
 }
 
 function getBMICategory(float $bmi): string {
@@ -98,4 +118,48 @@ function getBMICategory(float $bmi): string {
     if ($bmi < 25) return 'Normal weight';
     if ($bmi < 30) return 'Overweight';
     return 'Obese';
+}
+
+// --- User functions ---
+
+function createUser(string $email, string $passwordHash, string $displayName): int {
+    $db = getDB();
+    $stmt = $db->prepare('INSERT INTO users (email, password_hash, display_name) VALUES (:email, :hash, :name)');
+    $stmt->execute([':email' => $email, ':hash' => $passwordHash, ':name' => $displayName]);
+    return (int) $db->lastInsertId();
+}
+
+function getUserByEmail(string $email): ?array {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM users WHERE email = :email');
+    $stmt->execute([':email' => $email]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function getUserById(int $id): ?array {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+// --- Goal functions ---
+
+function setGoalWeight(int $userId, float $goalKg): void {
+    $db = getDB();
+    $stmt = $db->prepare('INSERT INTO user_goals (user_id, goal_weight_kg) VALUES (:uid, :goal)');
+    $stmt->execute([':uid' => $userId, ':goal' => $goalKg]);
+    // Also update users table for quick access
+    $stmt = $db->prepare('UPDATE users SET goal_weight_kg = :goal WHERE id = :uid');
+    $stmt->execute([':goal' => $goalKg, ':uid' => $userId]);
+}
+
+function getGoalWeight(int $userId): ?float {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT goal_weight_kg FROM users WHERE id = :uid');
+    $stmt->execute([':uid' => $userId]);
+    $val = $stmt->fetchColumn();
+    return $val !== false && $val !== null ? (float) $val : null;
 }

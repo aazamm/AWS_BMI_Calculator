@@ -1,20 +1,52 @@
 <?php
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/auth.php';
+startSession();
+
+$currentUser = getCurrentUser();
 
 // Handle API requests (saving and fetching records)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (isset($input['action']) && $input['action'] === 'save') {
         $name = trim($input['name'] ?? '');
         $surname = trim($input['surname'] ?? '');
         $weightKg = floatval($input['weight_kg'] ?? 0);
         $heightCm = floatval($input['height_cm'] ?? 0);
 
+        // Use authenticated user info if available
+        if ($currentUser) {
+            $name = $currentUser['display_name'];
+            $surname = '';
+        }
+
         if ($name !== '' && $weightKg > 0 && $heightCm > 0) {
-            $result = saveRecord($name, $surname, $weightKg, $heightCm);
+            $gender = isset($input['gender']) ? trim($input['gender']) : null;
+            $neckCm = isset($input['neck_cm']) ? floatval($input['neck_cm']) : null;
+            $waistCm = isset($input['waist_cm']) ? floatval($input['waist_cm']) : null;
+            $hipCm = isset($input['hip_cm']) ? floatval($input['hip_cm']) : null;
+            $bodyFatPct = isset($input['body_fat_pct']) ? floatval($input['body_fat_pct']) : null;
+            $whtr = isset($input['whtr']) ? floatval($input['whtr']) : null;
+            if ($neckCm === 0.0) $neckCm = null;
+            if ($waistCm === 0.0) $waistCm = null;
+            if ($hipCm === 0.0) $hipCm = null;
+            if ($bodyFatPct === 0.0) $bodyFatPct = null;
+            if ($whtr === 0.0) $whtr = null;
+
+            $result = saveRecord($name, $surname, $weightKg, $heightCm,
+                $currentUser['id'] ?? null, $gender, $neckCm, $waistCm, $hipCm, $bodyFatPct, $whtr);
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'record' => $result]);
+            exit;
+        }
+    }
+
+    if (isset($input['action']) && $input['action'] === 'set_goal' && $currentUser) {
+        $goalKg = floatval($input['goal_weight_kg'] ?? 0);
+        if ($goalKg > 0) {
+            setGoalWeight($currentUser['id'], $goalKg);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
             exit;
         }
     }
@@ -22,7 +54,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['CONTENT_TYPE']) && 
 
 if (isset($_GET['action']) && $_GET['action'] === 'get_history') {
     header('Content-Type: application/json');
-    echo json_encode(getRecords());
+    if ($currentUser) {
+        echo json_encode(getRecordsByUser($currentUser['id']));
+    } else {
+        echo json_encode(getRecords());
+    }
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'get_goal' && $currentUser) {
+    header('Content-Type: application/json');
+    echo json_encode(['goal_weight_kg' => getGoalWeight($currentUser['id'])]);
     exit;
 }
 
@@ -35,14 +77,32 @@ $visitorCount = incrementVisitorCount();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BMI & Health Calculator</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0073aa">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="BMI Calc">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
     <div class="container">
-        <div class="theme-toggle">
-            <button id="themeBtn">🌙 Dark Mode</button>
+        <div class="top-bar">
+            <div class="theme-toggle">
+                <button id="themeBtn">Dark Mode</button>
+            </div>
+            <div class="auth-bar">
+                <?php if ($currentUser): ?>
+                    <span class="auth-user"><?= htmlspecialchars($currentUser['display_name']) ?></span>
+                    <a href="login.php?action=logout" class="auth-link">Logout</a>
+                <?php else: ?>
+                    <a href="login.php" class="auth-link">Login</a>
+                    <a href="login.php?mode=signup" class="auth-link">Sign Up</a>
+                <?php endif; ?>
+            </div>
         </div>
         <h1>BMI Calculator</h1>
 
+        <?php if (!$currentUser): ?>
         <div class="form-group">
             <label for="name">Name</label>
             <input type="text" id="name" placeholder="Enter your name">
@@ -51,6 +111,10 @@ $visitorCount = incrementVisitorCount();
             <label for="surname">Surname</label>
             <input type="text" id="surname" placeholder="Enter your surname">
         </div>
+        <?php else: ?>
+        <input type="hidden" id="name" value="<?= htmlspecialchars($currentUser['display_name']) ?>">
+        <input type="hidden" id="surname" value="">
+        <?php endif; ?>
 
         <div class="form-row">
             <div class="form-group half-width">
@@ -99,6 +163,37 @@ $visitorCount = incrementVisitorCount();
                 </div>
             </div>
         </div>
+
+        <details class="body-measurements">
+            <summary>Body Measurements (for Body Fat %)</summary>
+            <div class="form-row">
+                <div class="form-group half-width">
+                    <label for="neckCirc">Neck Circumference (cm)</label>
+                    <input type="number" id="neckCirc" step="0.1" min="1" placeholder="e.g. 38">
+                </div>
+                <div class="form-group half-width">
+                    <label for="waistCirc">Waist Circumference (cm)</label>
+                    <input type="number" id="waistCirc" step="0.1" min="1" placeholder="e.g. 85">
+                </div>
+            </div>
+            <div class="form-group" id="hipGroup">
+                <label for="hipCirc">Hip Circumference (cm) <span id="hipNote">(required for female)</span></label>
+                <input type="number" id="hipCirc" step="0.1" min="1" placeholder="e.g. 95">
+            </div>
+        </details>
+
+        <?php if ($currentUser): ?>
+        <div class="form-group" id="goalWeightGroup">
+            <label for="goalWeight">Goal Weight</label>
+            <div class="input-group">
+                <input type="number" id="goalWeight" step="0.1" min="1" placeholder="e.g. 65">
+                <select id="goalWeightUnit">
+                    <option value="kg">kg</option>
+                    <option value="lbs">lbs</option>
+                </select>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="button-group">
             <button id="calcBtn" class="btn-primary">Calculate</button>
@@ -154,6 +249,30 @@ $visitorCount = incrementVisitorCount();
                     </div>
                 </div>
             </div>
+            <div class="result-card hidden" id="bodyFatCard">
+                <h4>Body Fat % (Navy Method)</h4>
+                <div class="result-value" id="bodyFatResult">--</div>
+                <div class="result-subtext" id="bodyFatCategory">--</div>
+            </div>
+            <div class="result-card hidden" id="whtrCard">
+                <h4>Waist-to-Height Ratio</h4>
+                <div class="result-value" id="whtrResult">--</div>
+                <div class="result-subtext" id="whtrCategory">--</div>
+            </div>
+            <div class="result-card hidden" id="velocityCard">
+                <h4>Weight Velocity</h4>
+                <div class="result-value" id="velocityResult">--</div>
+                <div class="result-subtext">kg/week (last 4 entries)</div>
+            </div>
+            <div class="result-card hidden" id="projectionCard">
+                <h4>Projected Goal Date</h4>
+                <div class="result-value" id="projectionResult">--</div>
+                <div class="result-subtext" id="projectionSubtext">Based on current trend</div>
+            </div>
+        </div>
+
+        <div id="reportBtnArea" class="hidden" style="text-align: center; margin-top: 15px;">
+            <button id="downloadReportBtn" class="btn-primary" style="max-width: 300px;">Download Health Report (PDF)</button>
         </div>
 
         <hr class="divider">
@@ -218,6 +337,20 @@ $visitorCount = incrementVisitorCount();
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>
+        window.BMI_USER = <?= json_encode($currentUser ? [
+            'id' => $currentUser['id'],
+            'name' => $currentUser['display_name'],
+            'email' => $currentUser['email'],
+        ] : null) ?>;
+    </script>
     <script src="functionality.js"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+    }
+    </script>
 </body>
 </html>
