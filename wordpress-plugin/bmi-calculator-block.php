@@ -19,6 +19,7 @@ define( 'BMI_DB_PATH', '/var/www/html/bmi/bmi_data.db' );
 require_once BMI_BLOCK_DIR . 'includes/db.php';
 require_once BMI_BLOCK_DIR . 'includes/leads.php';
 require_once BMI_BLOCK_DIR . 'includes/admin.php';
+require_once BMI_BLOCK_DIR . 'includes/integrations.php';
 
 /**
  * Enhancement 2: Create leads table on plugin activation.
@@ -293,7 +294,7 @@ function bmi_calculator_block_render( $attributes, $content ) {
             <?php
             // Enhancement 5: Results HTML filter
             $results_html = '
-            <div id="bmi-resultsArea" class="results-grid hidden" role="status" aria-live="polite">
+            <div id="bmi-resultsArea" class="results-grid hidden" role="status" aria-live="polite" tabindex="-1">
                 <div class="result-card" id="bmi-bmiCard">
                     <h4>' . esc_html__( 'Body Mass Index', 'bmi-calculator-block' ) . '</h4>
                     <div class="result-value" id="bmi-bmiResult">--</div>
@@ -344,6 +345,11 @@ function bmi_calculator_block_render( $attributes, $content ) {
                 </div>
             </div>';
             echo apply_filters( 'bmi_calculator_results_html', $results_html );
+            ?>
+
+            <?php
+            // Enhancement 5: Specialized hook for product recommendations/upsells
+            do_action( 'bmi_calculator_after_results', $attributes );
             ?>
 
             <!-- Enhancement 2: Lead capture form (shown after calculation) -->

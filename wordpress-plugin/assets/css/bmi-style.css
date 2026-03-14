@@ -133,11 +133,12 @@
 
 .bmi-calculator-wrap .btn-primary {
     background: var(--accent-color);
-    color: #fff;
+    color: var(--bmi-accent-text, #ffffff);
 }
 
 .bmi-calculator-wrap .btn-primary:hover {
     background: var(--accent-hover);
+    color: var(--bmi-accent-text, #ffffff);
 }
 
 .bmi-calculator-wrap .btn-secondary {
@@ -147,6 +148,15 @@
 
 .bmi-calculator-wrap .btn-secondary:hover {
     background: #cccccc;
+}
+
+.bmi-calculator-wrap.dark-mode .btn-secondary {
+    background: #374151;
+    color: #f3f4f6;
+}
+
+.bmi-calculator-wrap.dark-mode .btn-secondary:hover {
+    background: #4b5563;
 }
 
 .bmi-calculator-wrap .hidden {

@@ -104,6 +104,20 @@ function bmi_calculator_save_lead_endpoint( WP_REST_Request $request ) {
         bmi_save_lead( $email, $name, $bmi );
     }
 
+    // Enhancement 2: Send email results to the user
+    $subject = sprintf( __( 'Your BMI Results - %s', 'bmi-calculator-block' ), get_bloginfo( 'name' ) );
+    $category = bmi_getBMICategory( $bmi );
+    $message  = sprintf( __( 'Hello %s,', 'bmi-calculator-block' ), $name ) . "\n\n";
+    $message .= __( 'Thank you for using our BMI Calculator. Here are your results:', 'bmi-calculator-block' ) . "\n\n";
+    $message .= sprintf( __( 'BMI: %s', 'bmi-calculator-block' ), number_format( $bmi, 2 ) ) . "\n";
+    $message .= sprintf( __( 'Status: %s', 'bmi-calculator-block' ), $category ) . "\n\n";
+    $message .= __( 'For a more detailed health analysis and personalized tips, please visit our website.', 'bmi-calculator-block' ) . "\n\n";
+    $message .= __( 'Best regards,', 'bmi-calculator-block' ) . "\n";
+    $message .= get_bloginfo( 'name' );
+
+    $headers = array( 'Content-Type: text/plain; charset=UTF-8' );
+    wp_mail( $email, $subject, $message, $headers );
+
     $lead_data = array(
         'email' => $email,
         'name'  => $name,
@@ -126,6 +140,8 @@ function bmi_calculator_save_user_record( WP_REST_Request $request ) {
     $user      = wp_get_current_user();
     $weight_kg = floatval( $request->get_param( 'weight_kg' ) );
     $height_cm = floatval( $request->get_param( 'height_cm' ) );
+    $tdee      = floatval( $request->get_param( 'tdee' ) );
+    $diet_type = sanitize_text_field( $request->get_param( 'diet_type' ) );
 
     if ( $weight_kg <= 0 || $height_cm <= 0 ) {
         return new WP_REST_Response( array(
@@ -161,6 +177,8 @@ function bmi_calculator_save_user_record( WP_REST_Request $request ) {
         'height_cm'  => $height_cm,
         'bmi'        => $bmi,
         'category'   => bmi_getBMICategory( $bmi ),
+        'tdee'       => $tdee,
+        'diet_type'  => $diet_type,
         'created_at' => current_time( 'mysql' ),
     );
     $history[] = $history_record;

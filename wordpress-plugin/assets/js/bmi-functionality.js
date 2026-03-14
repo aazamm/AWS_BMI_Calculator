@@ -25,6 +25,23 @@ document.addEventListener('DOMContentLoaded', function () {
         dietType: container.dataset.dietType || 'balanced',
     };
 
+    // --- Phase 3: Accessibility & Contrast Helper ---
+    function getContrastYIQ(hexcolor) {
+        hexcolor = hexcolor.replace("#", "");
+        if (hexcolor.length === 3) {
+            hexcolor = hexcolor.split('').map(char => char + char).join('');
+        }
+        const r = parseInt(hexcolor.substr(0, 2), 16);
+        const g = parseInt(hexcolor.substr(2, 2), 16);
+        const b = parseInt(hexcolor.substr(4, 2), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128) ? 'black' : 'white';
+    }
+
+    // Apply high-contrast text color to buttons using primary color
+    const contrastColor = getContrastYIQ(config.primaryColor);
+    container.style.setProperty('--bmi-accent-text', contrastColor);
+
     // Enhancement 4: Check for logged-in WP user
     const wpUser = window.BMI_WP_USER || null;
 
@@ -90,10 +107,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- Diet Type Change ---
     const dietTypeSelect = container.querySelector('#bmi-dietType');
     function getCurrentDiet() {
-        if (dietTypeSelect) {
+        if (dietTypeSelect && dietTypeSelect.value !== 'balanced') {
             return DIET_PRESETS[dietTypeSelect.value] || DIET_PRESETS['balanced'];
         }
-        return { protein: config.macroProtein, carbs: config.macroCarbs, fats: config.macroFats };
+        // If balanced or no select, check if we have custom block config
+        return {
+            protein: config.macroProtein,
+            carbs: config.macroCarbs,
+            fats: config.macroFats
+        };
     }
 
     function updateMacroLabels() {
@@ -232,6 +254,7 @@ document.addEventListener('DOMContentLoaded', function () {
         container.querySelector('#bmi-bmiResult').className = "result-value " + statusClass;
 
         resultsArea.classList.remove('hidden');
+        resultsArea.focus(); // Move focus to results for screen readers
 
         // Save to Database via REST API
         const fullName = wpUser ? wpUser.name : (`${nameInput} ${surnameInput}`.trim() || 'Anonymous');
@@ -241,7 +264,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const endpoint = wpUser ? 'user-record' : 'record';
             const bodyData = wpUser ? {
                 weight_kg: kilograms.toFixed(2),
-                height_cm: centimeters.toFixed(2)
+                height_cm: centimeters.toFixed(2),
+                tdee: tdee.toFixed(0),
+                diet_type: dietTypeSelect ? dietTypeSelect.value : config.dietType
             } : {
                 name: nameInput || 'Anonymous',
                 surname: surnameInput,
