@@ -205,11 +205,12 @@ button {
 
 .btn-primary {
     background: var(--accent-color);
-    color: #fff;
+    color: var(--accent-text, #ffffff);
 }
 
 .btn-primary:hover {
     background: var(--accent-hover);
+    color: var(--accent-text, #ffffff);
 }
 
 .btn-secondary {
@@ -219,6 +220,15 @@ button {
 
 .btn-secondary:hover {
     background: #cccccc;
+}
+
+.dark-mode .btn-secondary {
+    background: #374151;
+    color: #f3f4f6;
+}
+
+.dark-mode .btn-secondary:hover {
+    background: #4b5563;
 }
 
 .hidden {

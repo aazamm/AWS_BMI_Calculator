@@ -84,6 +84,25 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // --- Accessibility: Contrast Helper ---
+    function getContrastYIQ(hexcolor) {
+        hexcolor = hexcolor.replace("#", "");
+        if (hexcolor.length === 3) {
+            hexcolor = hexcolor.split('').map(function(c) { return c + c; }).join('');
+        }
+        var r = parseInt(hexcolor.substr(0, 2), 16);
+        var g = parseInt(hexcolor.substr(2, 2), 16);
+        var b = parseInt(hexcolor.substr(4, 2), 16);
+        var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128) ? 'black' : 'white';
+    }
+
+    // Apply contrast text color to accent buttons
+    var accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
+    if (accentColor) {
+        document.documentElement.style.setProperty('--accent-text', getContrastYIQ(accentColor));
+    }
+
     // --- Theme Toggle ---
     const themeBtn = document.getElementById('themeBtn');
     const body = document.body;
@@ -356,6 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         resultsArea.classList.remove('hidden');
+        resultsArea.focus(); // Move focus to results for screen readers
         if (reportBtnArea) reportBtnArea.classList.remove('hidden');
 
         // Store last calculation for PDF report
@@ -402,7 +422,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     waist_cm: isNaN(waistCm) ? null : waistCm,
                     hip_cm: isNaN(hipCm) ? null : hipCm,
                     body_fat_pct: bodyFatPct,
-                    whtr: whtr
+                    whtr: whtr,
+                    tdee: tdee.toFixed(0),
+                    diet_type: dietTypeSelect.value
                 })
             });
             const resData = await response.json();

@@ -57,13 +57,15 @@ function saveRecord(
     ?float $waistCm = null,
     ?float $hipCm = null,
     ?float $bodyFatPct = null,
-    ?float $whtr = null
+    ?float $whtr = null,
+    ?float $tdee = null,
+    ?string $dietType = null
 ): array {
     $heightM = $heightCm / 100;
     $bmi = round($weightKg / ($heightM * $heightM), 2);
 
     $db = getDB();
-    $stmt = $db->prepare('INSERT INTO bmi_records (name, surname, weight_kg, height_cm, bmi, user_id, gender, neck_cm, waist_cm, hip_cm, body_fat_pct, whtr) VALUES (:name, :surname, :weight, :height, :bmi, :user_id, :gender, :neck_cm, :waist_cm, :hip_cm, :body_fat_pct, :whtr)');
+    $stmt = $db->prepare('INSERT INTO bmi_records (name, surname, weight_kg, height_cm, bmi, user_id, gender, neck_cm, waist_cm, hip_cm, body_fat_pct, whtr, tdee, diet_type) VALUES (:name, :surname, :weight, :height, :bmi, :user_id, :gender, :neck_cm, :waist_cm, :hip_cm, :body_fat_pct, :whtr, :tdee, :diet_type)');
     $stmt->execute([
         ':name' => $name,
         ':surname' => $surname,
@@ -77,6 +79,8 @@ function saveRecord(
         ':hip_cm' => $hipCm,
         ':body_fat_pct' => $bodyFatPct,
         ':whtr' => $whtr,
+        ':tdee' => $tdee,
+        ':diet_type' => $dietType,
     ]);
 
     return ['bmi' => $bmi, 'category' => getBMICategory($bmi)];

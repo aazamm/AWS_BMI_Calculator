@@ -33,8 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['CONTENT_TYPE']) && 
             if ($bodyFatPct === 0.0) $bodyFatPct = null;
             if ($whtr === 0.0) $whtr = null;
 
+            $tdee = isset($input['tdee']) ? floatval($input['tdee']) : null;
+            $dietType = isset($input['diet_type']) ? trim($input['diet_type']) : null;
+            if ($tdee === 0.0) $tdee = null;
+
             $result = saveRecord($name, $surname, $weightKg, $heightCm,
-                $currentUser['id'] ?? null, $gender, $neckCm, $waistCm, $hipCm, $bodyFatPct, $whtr);
+                $currentUser['id'] ?? null, $gender, $neckCm, $waistCm, $hipCm, $bodyFatPct, $whtr, $tdee, $dietType);
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'record' => $result]);
             exit;
@@ -220,7 +224,7 @@ $visitorCount = incrementVisitorCount();
             <button id="clearBtn" class="btn-secondary" aria-label="Clear form">Clear</button>
         </div>
 
-        <div id="resultsArea" class="results-grid hidden" role="status" aria-live="polite">
+        <div id="resultsArea" class="results-grid hidden" role="status" aria-live="polite" tabindex="-1">
             <div class="result-card" id="bmiCard">
                 <h4>Body Mass Index</h4>
                 <div class="result-value" id="bmiResult">--</div>
