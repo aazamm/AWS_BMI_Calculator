@@ -55,4 +55,4 @@ if ($httpdRunning) {
 }
 
 http_response_code($healthy ? 200 : 503);
-echo json_encode(['healthy' => $healthy, 'checks' => $checks]);
+echo json_encode(['healthy' => $healthy, 'checks' => $checks, 'version' => '2.1.0']);
