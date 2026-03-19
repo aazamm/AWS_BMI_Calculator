@@ -126,6 +126,54 @@ h1 {
     color: var(--accent-color);
 }
 
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin: 20px auto;
+    max-width: 400px;
+    color: #999;
+    font-size: 0.85rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+}
+
+.auth-divider span {
+    padding: 0 12px;
+}
+
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    background: #fff;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.btn-google:hover {
+    background: #f8f8f8;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-google svg {
+    flex-shrink: 0;
+}
+
 #themeBtn {
     padding: 8px 12px;
     font-size: 14px;
@@ -489,7 +537,7 @@ th {
 }
 
 .chart-container {
-    height: 250px;
+    height: 320px;
     margin-bottom: 20px;
 }
 

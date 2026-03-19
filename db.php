@@ -1,24 +1,28 @@
 <?php
 
+function loadEnv(): void {
+    static $loaded = false;
+    if ($loaded) return;
+    $loaded = true;
+
+    $envFile = __DIR__ . '/.env';
+    if (file_exists($envFile)) {
+        foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            if (str_starts_with($line, '#')) continue;
+            if (str_contains($line, '=')) {
+                [$key, $val] = explode('=', $line, 2);
+                putenv(trim($key) . '=' . trim($val));
+            }
+        }
+    }
+}
+
 function getDB(): PDO {
     static $pdo = null;
     if ($pdo !== null) return $pdo;
 
-    // Load credentials from environment or .env file
+    loadEnv();
     $dbUrl = getenv('DATABASE_URL');
-    if (!$dbUrl) {
-        $envFile = __DIR__ . '/.env';
-        if (file_exists($envFile)) {
-            foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-                if (str_starts_with($line, '#')) continue;
-                if (str_contains($line, '=')) {
-                    [$key, $val] = explode('=', $line, 2);
-                    putenv(trim($key) . '=' . trim($val));
-                }
-            }
-            $dbUrl = getenv('DATABASE_URL');
-        }
-    }
 
     if (!$dbUrl) {
         throw new RuntimeException('DATABASE_URL not set');
@@ -166,4 +170,46 @@ function getGoalWeight(int $userId): ?float {
     $stmt->execute([':uid' => $userId]);
     $val = $stmt->fetchColumn();
     return $val !== false && $val !== null ? (float) $val : null;
+}
+
+// --- Unit preference functions ---
+
+function getUserPreferences(int $userId): array {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT pref_weight_unit, pref_height_unit FROM users WHERE id = :uid');
+    $stmt->execute([':uid' => $userId]);
+    $row = $stmt->fetch();
+    return [
+        'weight_unit' => $row['pref_weight_unit'] ?? 'kg',
+        'height_unit' => $row['pref_height_unit'] ?? 'cm',
+    ];
+}
+
+function saveUserPreferences(int $userId, string $weightUnit, string $heightUnit): void {
+    $db = getDB();
+    $stmt = $db->prepare('UPDATE users SET pref_weight_unit = :wu, pref_height_unit = :hu WHERE id = :uid');
+    $stmt->execute([':wu' => $weightUnit, ':hu' => $heightUnit, ':uid' => $userId]);
+}
+
+// --- Google OAuth functions ---
+
+function getUserByGoogleId(string $googleId): ?array {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM users WHERE google_id = :gid');
+    $stmt->execute([':gid' => $googleId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function createGoogleUser(string $email, string $displayName, string $googleId): int {
+    $db = getDB();
+    $stmt = $db->prepare('INSERT INTO users (email, password_hash, display_name, google_id) VALUES (:email, NULL, :name, :gid)');
+    $stmt->execute([':email' => $email, ':name' => $displayName, ':gid' => $googleId]);
+    return (int) $db->lastInsertId();
+}
+
+function linkGoogleId(int $userId, string $googleId): void {
+    $db = getDB();
+    $stmt = $db->prepare('UPDATE users SET google_id = :gid WHERE id = :uid');
+    $stmt->execute([':gid' => $googleId, ':uid' => $userId]);
 }

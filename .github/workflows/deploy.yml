@@ -28,7 +28,7 @@ jobs:
       - name: Package native app
         run: |
           tar czf /tmp/bmi-native.tar.gz \
-            index.php db.php auth.php login.php admin.php health.php \
+            index.php db.php auth.php login.php admin.php health.php google_auth.php \
             functionality.js lang.js style.css \
             sw.js manifest.json \
             icons/

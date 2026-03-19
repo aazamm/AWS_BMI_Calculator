@@ -74,6 +74,7 @@ cp /tmp/bmi-calculator/style.css /var/www/html/bmi/
 cp /tmp/bmi-calculator/functionality.js /var/www/html/bmi/
 cp /tmp/bmi-calculator/health.php /var/www/html/bmi/
 cp /tmp/bmi-calculator/admin.php /var/www/html/bmi/
+cp /tmp/bmi-calculator/google_auth.php /var/www/html/bmi/
 
 # BMI Calculator database credentials
 cat > /var/www/html/bmi/.env <<'BMIENV'

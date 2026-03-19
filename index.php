@@ -45,6 +45,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['CONTENT_TYPE']) && 
         }
     }
 
+    if (isset($input['action']) && $input['action'] === 'save_preferences' && $currentUser) {
+        $weightUnit = trim($input['weight_unit'] ?? 'kg');
+        $heightUnit = trim($input['height_unit'] ?? 'cm');
+        saveUserPreferences($currentUser['id'], $weightUnit, $heightUnit);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     if (isset($input['action']) && $input['action'] === 'set_goal' && $currentUser) {
         $goalKg = floatval($input['goal_weight_kg'] ?? 0);
         if ($goalKg > 0) {
@@ -364,11 +373,11 @@ $visitorCount = incrementVisitorCount();
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script>
-        window.BMI_USER = <?= json_encode($currentUser ? [
+        window.BMI_USER = <?= json_encode($currentUser ? array_merge([
             'id' => $currentUser['id'],
             'name' => $currentUser['display_name'],
             'email' => $currentUser['email'],
-        ] : null) ?>;
+        ], getUserPreferences($currentUser['id'])) : null) ?>;
     </script>
     <script src="lang.js"></script>
     <script src="functionality.js"></script>

@@ -130,6 +130,41 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // --- Unit Preference Persistence ---
+    const weightUnitSelect = document.getElementById('weightUnit');
+    const heightUnitSelect = document.getElementById('heightUnit');
+
+    function restoreUnitPreferences() {
+        if (window.BMI_USER && window.BMI_USER.weight_unit) {
+            weightUnitSelect.value = window.BMI_USER.weight_unit;
+            heightUnitSelect.value = window.BMI_USER.height_unit;
+        } else if (!window.BMI_USER) {
+            const savedWeight = localStorage.getItem('bmi-weight-unit');
+            const savedHeight = localStorage.getItem('bmi-height-unit');
+            if (savedWeight) weightUnitSelect.value = savedWeight;
+            if (savedHeight) heightUnitSelect.value = savedHeight;
+        }
+    }
+
+    function saveUnitPreference() {
+        const wu = weightUnitSelect.value;
+        const hu = heightUnitSelect.value;
+        if (window.BMI_USER) {
+            fetch('index.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'save_preferences', weight_unit: wu, height_unit: hu })
+            }).catch(err => console.error('Failed to save preferences:', err));
+        } else {
+            localStorage.setItem('bmi-weight-unit', wu);
+            localStorage.setItem('bmi-height-unit', hu);
+        }
+    }
+
+    weightUnitSelect.addEventListener('change', saveUnitPreference);
+    heightUnitSelect.addEventListener('change', saveUnitPreference);
+    restoreUnitPreferences();
+
     // --- Main Calculator Logic ---
     const calcBtn = document.getElementById('calcBtn');
     const clearBtn = document.getElementById('clearBtn');
@@ -566,6 +601,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const labels = chartData.map(d => d.created_at.split(' ')[0]);
         const bmiValues = chartData.map(d => parseFloat(d.bmi));
         const weightValues = chartData.map(d => parseFloat(d.weight_kg));
+        const bodyFatValues = chartData.map(d => d.body_fat_pct ? parseFloat(d.body_fat_pct) : null);
+        const whtrValues = chartData.map(d => d.whtr ? parseFloat(d.whtr) : null);
+        const hasBodyFat = bodyFatValues.some(v => v !== null);
+        const hasWhtr = whtrValues.some(v => v !== null);
 
         const datasets = [
             {
@@ -589,6 +628,37 @@ document.addEventListener('DOMContentLoaded', function () {
                 yAxisID: 'y1'
             }
         ];
+
+        // Body Fat % trend (shares BMI y-axis, similar numeric range)
+        if (hasBodyFat) {
+            datasets.push({
+                label: 'Body Fat %',
+                data: bodyFatValues,
+                borderColor: '#9b59b6',
+                borderWidth: 1.5,
+                fill: false,
+                tension: 0.3,
+                pointRadius: 3,
+                spanGaps: true,
+                yAxisID: 'y'
+            });
+        }
+
+        // WHtR trend (separate y2 axis, values 0.3-0.7)
+        if (hasWhtr) {
+            datasets.push({
+                label: 'WHtR',
+                data: whtrValues,
+                borderColor: '#1abc9c',
+                borderWidth: 1.5,
+                borderDash: [3, 3],
+                fill: false,
+                tension: 0.3,
+                pointRadius: 3,
+                spanGaps: true,
+                yAxisID: 'y2'
+            });
+        }
 
         // Goal BMI line
         const goalInput = document.getElementById('goalWeight');
@@ -634,6 +704,15 @@ document.addEventListener('DOMContentLoaded', function () {
                         position: 'right',
                         title: { display: true, text: 'Weight (kg)' },
                         grid: { drawOnChartArea: false }
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: hasWhtr,
+                        position: 'right',
+                        title: { display: hasWhtr, text: 'WHtR' },
+                        grid: { drawOnChartArea: false },
+                        min: 0.3,
+                        max: 0.7
                     }
                 }
             }
