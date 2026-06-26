@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and adjust. Defaults in variables.tf already match the
+# existing eu-central-1 / account 359345324847 setup.
+
+# google_client_id  = "xxxxxxxxxxxx.apps.googleusercontent.com"
+# image_tag         = "latest"
+
+# Cutover switch: false = build/test only (no traffic change);
+#                 true  = route aaronzammit.com to Fargate (go live).
+# cutover_to_fargate = false

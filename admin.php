@@ -1,18 +1,21 @@
 <?php
-// Basic HTTP authentication - change these credentials
-define('ADMIN_USER', 'admin');
-define('ADMIN_PASS', 'bmi2026!');
+require_once __DIR__ . '/db.php';
+loadEnv();
 
-if (!isset($_SERVER['PHP_AUTH_USER']) ||
-    $_SERVER['PHP_AUTH_USER'] !== ADMIN_USER ||
-    $_SERVER['PHP_AUTH_PW'] !== ADMIN_PASS) {
+// Admin credentials come from the environment (set via SSM in the container).
+// Fail closed if ADMIN_PASS is not configured.
+$adminUser = getenv('ADMIN_USER') ?: 'admin';
+$adminPass = getenv('ADMIN_PASS') ?: '';
+
+if ($adminPass === '' ||
+    !isset($_SERVER['PHP_AUTH_USER']) ||
+    $_SERVER['PHP_AUTH_USER'] !== $adminUser ||
+    $_SERVER['PHP_AUTH_PW'] !== $adminPass) {
     header('WWW-Authenticate: Basic realm="BMI Admin"');
     header('HTTP/1.0 401 Unauthorized');
     echo 'Unauthorized';
     exit;
 }
-
-require_once __DIR__ . '/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = (int) ($_POST['id'] ?? 0);
