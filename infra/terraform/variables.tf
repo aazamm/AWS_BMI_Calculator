@@ -84,10 +84,10 @@ variable "base_url" {
   default = "https://aaronzammit.com/bmi"
 }
 
-# Google OAuth client id (public, not a secret). Set the real value before cutover.
+# Google OAuth client id (public, not a secret).
 variable "google_client_id" {
   type    = string
-  default = ""
+  default = "83844891923-lsisbggkeqilj78qnb0qp9qhjqj6ao4l.apps.googleusercontent.com"
 }
 
 variable "admin_user" {
@@ -106,11 +106,11 @@ variable "staging_host" {
 }
 
 # ---------------------------------------------------------------------------
-# Cutover toggle. When true, adds a host rule routing aaronzammit.com to the
-# Fargate target group (priority 15, ahead of the default rule that points at
-# the EC2 instance TG). Flip to true to go live; false to roll back.
+# Routes aaronzammit.com to the Fargate target group (priority-15 ALB rule).
+# TRUE in production: cutover completed 2026-06-26 and the EC2 ASG + instance
+# target group have been DELETED, so a fresh apply must keep this true.
 # ---------------------------------------------------------------------------
 variable "cutover_to_fargate" {
   type    = bool
-  default = false
+  default = true
 }
