@@ -1,0 +1,15 @@
+# Local Terraform/OpenTofu working files
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Real var files may contain values worth not committing — keep only the example
+*.tfvars
+!terraform.tfvars.example
+
+# Saved plans
+*.tfplan
+
+# Keep the provider lock file committed (do NOT ignore .terraform.lock.hcl)

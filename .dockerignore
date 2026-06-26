@@ -1,0 +1,15 @@
+# Keep only the calculator app (PHP + static assets + icons) in the image.
+.git
+.github
+.gitignore
+.DS_Store
+wordpress-plugin
+infra
+bmi_data.db
+*.db
+*.md
+*.docx
+deploy.sh
+Dockerfile
+.dockerignore
+.env

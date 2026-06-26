@@ -1,158 +1,61 @@
-name: Deploy BMI Calculator
+name: CI/CD
 
 on:
   push:
     branches: [main]
-    paths:
-      - '*.php'
-      - '*.js'
-      - '*.css'
-      - '*.json'
-      - 'icons/**'
-      - 'wordpress-plugin/**'
+  pull_request:
+    branches: [main]
 
 jobs:
-  deploy-native:
-    name: Deploy Native App
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+      - name: PHP syntax check
+        run: |
+          status=0
+          for f in $(git ls-files '*.php'); do php -l "$f" || status=1; done
+          exit $status
 
+  deploy:
+    needs: lint
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: eu-central-1
+      ECR_REPO: bmi-web
+      CLUSTER: bmi-cluster
+      WEB_SERVICE: bmi-web
+    steps:
+      - uses: actions/checkout@v4
+
+      # Static IAM keys (scoped user bmi-ci). Hardening follow-up: GitHub OIDC role.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Package native app
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
-          tar czf /tmp/bmi-native.tar.gz \
-            index.php db.php auth.php login.php admin.php health.php google_auth.php \
-            functionality.js lang.js style.css \
-            sw.js manifest.json \
-            icons/
+          IMAGE="$REGISTRY/${ECR_REPO}"
+          docker build -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" .
+          docker push "$IMAGE:latest"
+          docker push "$IMAGE:${GITHUB_SHA::7}"
 
-      - name: Upload to S3
+      - name: Deploy web service (force new deployment)
         run: |
-          aws s3 cp /tmp/bmi-native.tar.gz \
-            s3://bmi-calculator-deploy-359345324847/bmi-native.tar.gz
-
-      - name: Get ASG instance IDs
-        id: instances
-        run: |
-          INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
-            --auto-scaling-group-names bmi-calculator-asg \
-            --query 'AutoScalingGroups[0].Instances[*].InstanceId' \
-            --output text)
-          echo "ids=$INSTANCE_IDS" >> $GITHUB_OUTPUT
-          echo "Deploying to instances: $INSTANCE_IDS"
-
-      - name: Deploy via SSM
-        run: |
-          INSTANCE_IDS="${{ steps.instances.outputs.ids }}"
-          # Convert space-separated to quoted list
-          IDS_JSON=$(echo $INSTANCE_IDS | tr ' ' '\n' | jq -R . | jq -s .)
-
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids $INSTANCE_IDS \
-            --document-name "AWS-RunShellScript" \
-            --parameters '{"commands":[
-              "set -e",
-              "aws s3 cp s3://bmi-calculator-deploy-359345324847/bmi-native.tar.gz /tmp/bmi-native.tar.gz --region eu-central-1",
-              "tar xzf /tmp/bmi-native.tar.gz -C /var/www/html/bmi/",
-              "chown -R apache:apache /var/www/html/bmi/",
-              "chmod -R 755 /var/www/html/bmi/",
-              "chmod 775 /var/www/html/bmi",
-              "rm /tmp/bmi-native.tar.gz",
-              "echo Deploy complete"
-            ]}' \
-            --query 'Command.CommandId' \
-            --output text)
-
-          echo "SSM Command ID: $COMMAND_ID"
-
-          # Wait for command to complete
-          sleep 10
-          for INSTANCE in $INSTANCE_IDS; do
-            STATUS=$(aws ssm get-command-invocation \
-              --command-id $COMMAND_ID \
-              --instance-id $INSTANCE \
-              --query 'Status' --output text 2>/dev/null || echo "Pending")
-            echo "Instance $INSTANCE: $STATUS"
-            if [ "$STATUS" = "Failed" ]; then
-              aws ssm get-command-invocation \
-                --command-id $COMMAND_ID \
-                --instance-id $INSTANCE \
-                --query 'StandardErrorContent' --output text
-              exit 1
-            fi
-          done
-
-      - name: Verify health checks
-        run: |
-          INSTANCE_IDS="${{ steps.instances.outputs.ids }}"
-          for INSTANCE in $INSTANCE_IDS; do
-            PRIVATE_IP=$(aws ec2 describe-instances \
-              --instance-ids $INSTANCE \
-              --query 'Reservations[0].Instances[0].PrivateIpAddress' \
-              --output text)
-            echo "Instance $INSTANCE ($PRIVATE_IP): checking health via SSM..."
-            aws ssm send-command \
-              --instance-ids $INSTANCE \
-              --document-name "AWS-RunShellScript" \
-              --parameters '{"commands":["curl -sf http://localhost/bmi/health.php || exit 1"]}' \
-              --query 'Command.CommandId' --output text
-          done
-          echo "Health checks dispatched"
-
-  deploy-wordpress:
-    name: Deploy WordPress Plugin
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
-
-      - name: Package WordPress plugin
-        run: |
-          tar czf /tmp/bmi-plugin.tar.gz -C wordpress-plugin .
-
-      - name: Upload to S3
-        run: |
-          aws s3 cp /tmp/bmi-plugin.tar.gz \
-            s3://bmi-calculator-deploy-359345324847/bmi-plugin.tar.gz
-
-      - name: Get ASG instance IDs
-        id: instances
-        run: |
-          INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
-            --auto-scaling-group-names bmi-calculator-asg \
-            --query 'AutoScalingGroups[0].Instances[*].InstanceId' \
-            --output text)
-          echo "ids=$INSTANCE_IDS" >> $GITHUB_OUTPUT
-
-      - name: Deploy via SSM
-        run: |
-          INSTANCE_IDS="${{ steps.instances.outputs.ids }}"
-          PLUGIN_DIR="/var/www/html/wp-content/plugins/bmi-calculator-block"
-
-          aws ssm send-command \
-            --instance-ids $INSTANCE_IDS \
-            --document-name "AWS-RunShellScript" \
-            --parameters "{\"commands\":[
-              \"set -e\",
-              \"aws s3 cp s3://bmi-calculator-deploy-359345324847/bmi-plugin.tar.gz /tmp/bmi-plugin.tar.gz --region eu-central-1\",
-              \"mkdir -p $PLUGIN_DIR/{includes,assets/{js,css},block}\",
-              \"tar xzf /tmp/bmi-plugin.tar.gz -C $PLUGIN_DIR\",
-              \"chown -R apache:apache $PLUGIN_DIR\",
-              \"chmod -R 755 $PLUGIN_DIR\",
-              \"rm /tmp/bmi-plugin.tar.gz\",
-              \"echo WordPress plugin deployed\"
-            ]}" \
-            --query 'Command.CommandId' --output text
+          aws ecs update-service --cluster "$CLUSTER" --service "$WEB_SERVICE" \
+            --force-new-deployment >/dev/null
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "$WEB_SERVICE"
+          echo "Web service stable."
