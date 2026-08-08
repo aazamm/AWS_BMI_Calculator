@@ -1,142 +1,127 @@
 # AWS Infrastructure Investigation Report - Last 24 Hours
 
-**Date:** 2026-02-11
-**Infrastructure:** BMI Calculator (aaronzammit.com)
+**Date:** 2026-08-07 (window 2026-08-06 19:08 → 2026-08-07 19:08 CEST)
+**Infrastructure:** BMI Calculator (aaronzammit.com/bmi/) — ECS Fargate
+**Previous report:** 2026-02-11 (pre-Fargate, see git history)
 
-## 1. CloudFront (Distribution E16YYJ4DT46N17)
+## Architecture (current)
 
-| Metric | Value |
-|--------|-------|
-| **Total Requests** | ~12,647 |
-| **Total Data Transferred** | ~7.4 MB |
-| **Peak Hour** | 20:39 UTC+1 — 4,349 requests |
-| **4xx Error Rate (avg)** | Highly variable: 0% to **98.4%** |
-| **5xx Error Rate** | ~16% in one hour (22:39), otherwise ~0% |
-| **Cache Policy** | **CachingDisabled** (every request hits origin) |
-| **WAF** | **None** |
-| **Access Logging** | **Disabled** |
-| **HTTP Version** | HTTP/2 (HTTP/3 not enabled) |
+```
+User → CloudFront E16YYJ4DT46N17 (CachingDisabled) → bmi-calculator-alb (+ WAF regional)
+         → host-header routing:
+             aaronzammit.com / default        → bmi-fargate-tg → ECS bmi-cluster/bmi-web (1× Fargate 0.25vCPU/512MB, scale 1–3)
+             echelonfinance.live (+staging)   → financial-rss-fargate-tg (separate app, shared ALB)
+         → RDS financial-rss-db (Postgres db.t3.micro, single-AZ, 20GB) — shared, DB `bmi_calculator`
+```
 
-### Key Concern
+EC2 ASG, WordPress, and MariaDB are fully decommissioned. Secrets in SSM `/bmi/*`; CI via GitHub OIDC.
 
-The 4xx error rates are extreme — peaking at **98.4%** at 11:39 and **97%** at 18:39. These correlate with massive bot/vulnerability scanner waves hitting your site. Combined with caching disabled, every scanner request is forwarded to your ALB and EC2 instances.
-
----
-
-## 2. Application Load Balancer (bmi-calculator-alb)
+## 1. CloudFront (E16YYJ4DT46N17)
 
 | Metric | Value |
 |--------|-------|
-| **Total Requests** | ~44,547 (includes health checks) |
-| **2xx Responses** | ~9,569 |
-| **4xx Responses** | **~34,024** (76% of all traffic!) |
-| **5xx Responses (target)** | **817** |
-| **5xx Responses (ELB)** | 0 |
-| **Peak Hour** | 19:39 — **32,831 requests** (29,429 were 4xx!) |
-| **Avg Response Time** | 4ms–260ms |
-| **Max Response Time** | **1.23s** (during peak load) |
-| **Healthy Hosts** | 2/2 — never dropped |
+| Total Requests | ~2,536 (vs ~12,600 in Feb) |
+| Data Transferred | ~2.2 MB |
+| Peak Hour | 11:08 CEST — 792 requests |
+| 4xx Error Rate | 25–80% during scanner waves (traffic is mostly scanners) |
+| 5xx Error Rate | **0% all 24h** |
+| Cache Policy | still **CachingDisabled** |
+| Access Logging | still **Disabled** |
+| HTTP Version | HTTP/2 (HTTP/3 not enabled) |
+| WAF on CloudFront | None (WAF is regional, on the ALB) |
 
-### Key Concern
+## 2. ALB (bmi-calculator-alb)
 
-The **817 target 5xx errors** are concerning — 656 occurred at 19:39 and 159 at 22:39, both correlating directly with massive scanner traffic spikes. Your instances are buckling under the bot load.
+| Metric | Value |
+|--------|-------|
+| Total Requests | ~2,094 |
+| 2xx | ~126 (6%) |
+| 3xx | ~145 |
+| Target 4xx | ~1,823 (87% — scanner 404s) |
+| ELB 4xx | ~767 (mostly WAF 403 blocks) |
+| **Target 5xx** | **0** (was 817 in Feb) |
+| ELB 5xx | 0 |
+| Avg Response Time | 1–88 ms |
+| Max Response Time | 0.55 s |
+| Healthy Targets | 1/1 the entire 24h, zero unhealthy minutes |
 
----
+## 3. WAF (bmi-calculator-waf, regional on ALB)
 
-## 3. EC2 / Auto Scaling Group
+| Rule | Blocked (24h) |
+|------|---------------|
+| CommonRuleSet | 496 |
+| KnownBadInputs | 197 |
+| PHPRuleSet | 5 |
+| BlockScannerURIs | 1 |
+| SQLiRuleSet / RateLimitPerIP | 0 |
+| **Total blocked** | **~699** (~25% of all traffic) |
 
-| Metric | Instance 1 (i-065a...) | Instance 2 (i-06da...) |
-|--------|----------------------|----------------------|
-| **Type** | t3.micro | t3.micro |
-| **AZ** | eu-central-1c | eu-central-1b |
-| **Running Since** | Jan 25 | Jan 25 |
-| **Launch Template** | **v2** | **v2** |
-| **CPU Avg** | <1% (peak 12.4%) | <1% (peak 12.7%) |
-| **CPU Credits** | 288/288 (maxed) | 288/288 (maxed) |
-| **Memory Avg** | ~39% | ~39% |
-| **Memory Max** | ~42% | ~40% |
-| **TCP Connections Avg** | ~1.4 | ~1.4 |
-| **TCP Connections Max** | 16 (during peak) | 16 (during peak) |
+## 4. ECS Fargate (bmi-cluster / bmi-web)
 
-| ASG Config | Value |
-|------------|-------|
-| **Desired/Min/Max** | 2/2/4 |
-| **Scaling Events (24h)** | None |
-| **Scaling Policy - CPU** | Target 70% (never triggered) |
-| **Scaling Policy - Memory** | Target 70% (never triggered) |
-| **Launch Template Default** | **v6** (instances running v2!) |
+| Metric | Value |
+|--------|-------|
+| Tasks | 1 running (task def `bmi-web:2`), steady state |
+| Task size | 0.25 vCPU / 512 MB, autoscaling 1–3 on CPU |
+| CPU | avg ~1.1%, peak 4.3% |
+| Memory | ~6.5% (~33 MB of 512 MB) |
+| App logs | Only scanner-probe 404s (`x.php`, `wp-*.php`, webshell names). **No genuine application errors.** |
 
----
+## 5. RDS (financial-rss-db, shared Postgres)
 
-## Improvement Recommendations
+| Metric | Value |
+|--------|-------|
+| CPU | ~3.7% steady |
+| Connections | max 6 |
+| Free Storage | 18.2 GB of 20 GB (~9% used) |
+| Freeable Memory | 145–185 MB (of 1 GB, typical for t3.micro Postgres) |
 
-### CRITICAL Priority
+## 6. CloudWatch Alarms
 
-#### 1. Deploy AWS WAF on CloudFront
+| Alarm | State | Note |
+|-------|-------|------|
+| BMI-Calculator-ALB-5xx-Errors | OK | monitors ELB 5xx only, not target 5xx |
+| BMI-Calculator-High-Latency | OK | |
+| BMI-Calculator-Unhealthy-Targets | OK | |
+| BMI-Calculator-High-CPU | **INSUFFICIENT_DATA since 26 Jun** | points at deleted EC2 |
+| BMI-Calculator-High-Memory | **INSUFFICIENT_DATA since 26 Jun** | CloudWatch-agent metric, gone with EC2 |
+| BMI-Calculator-High-Disk | **INSUFFICIENT_DATA since 26 Jun** | same |
+| TargetTracking bmi-web AlarmLow | ALARM | normal (service at min capacity) |
 
-- Your site is absorbing massive scanner/bot traffic (~34K 4xx hits in 24hrs) that's causing 5xx errors on your servers
-- Add managed rule groups: `AWSManagedRulesCommonRuleSet`, `AWSManagedRulesBotControlRuleSet`, `AWSManagedRulesKnownBadInputsRuleSet`
-- Add a rate-limiting rule (e.g., 100 requests/5min per IP) to throttle scanners
-- **Estimated cost:** ~$6/month base + $1/million requests
-- **Impact:** Eliminates 5xx errors from scanner floods, reduces EC2 load
+## Assessment
 
-#### 2. Enable CloudFront Caching
+**The February crisis is resolved.** Scanner traffic is still ~85–90% of requests, but: WAF blocks ~25% at the ALB, the rest get cheap 404s, target 5xx went from 817 → 0, latency is excellent, and the single Fargate task never exceeded 4.3% CPU. Overall traffic is ~5× lower than February (scanners lost interest post-WordPress). Health was 100% for the full window.
 
-- Currently using `CachingDisabled` — every request (including static CSS/JS/images) hits your EC2 instances
-- Create cache behaviors:
-  - `/wp-content/*`, `/wp-includes/*` → Cache with TTL 86400s (static assets)
-  - `/wp-admin/*`, `/wp-login.php` → No cache (admin)
-  - Default `/*` → Cache with short TTL (60-300s) or use `CachingOptimized` with appropriate headers
-- **Impact:** Dramatic reduction in origin load, faster page loads, lower ALB costs
+## Recommendations
 
-### HIGH Priority
+### HIGH — Alarm hygiene (the monitoring is half-blind)
+1. **Delete the three dead EC2 alarms** (High-CPU, High-Memory, High-Disk) — stuck in INSUFFICIENT_DATA since the June decommission.
+2. **Replace with ECS + RDS alarms**: `AWS/ECS CPUUtilization`/`MemoryUtilization` (bmi-cluster/bmi-web) >80%, `AWS/RDS FreeStorageSpace` <2 GB and `FreeableMemory` <50 MB, and add `HTTPCode_Target_5XX_Count` ≥10 to complement the existing ELB-5xx alarm. Route all to `bmi-calculator-alerts`.
 
-#### 3. Enable CloudFront Access Logging
+### MEDIUM — Carry-overs from February, still open
+3. **CloudFront caching** — still CachingDisabled; cache static assets (css/js/icons) even with low traffic for latency + resilience.
+4. **CloudFront access logging** (and/or ALB logs) — still no audit trail of attacking IPs.
+5. **Enable HTTP/3** — free toggle.
 
-- Logging is disabled — you can't analyze traffic patterns, identify attacking IPs, or debug issues
-- Enable logging to an S3 bucket for forensic analysis
-- Consider also enabling ALB access logs
+### MEDIUM — Account hygiene
+6. **Stop using root credentials for CLI/daily work** — create an IAM/Identity Center user; lock root with MFA.
+7. **Verify RDS automated backups/retention** — single-AZ db.t3.micro is now the only stateful component in the whole stack.
 
-#### 4. Instance Refresh to Launch Template v6
-
-- Both instances are running **v2** but the latest/default template is **v6**
-- v6 includes the CloudWatch aggregation_dimensions fix needed for memory-based scaling to work correctly
-- Run: `aws autoscaling start-instance-refresh --auto-scaling-group-name bmi-calculator-asg --region eu-central-1`
-
-### MEDIUM Priority
-
-#### 5. Consider Right-Sizing / Cost Optimization
-
-- Your legitimate traffic is very low (~20-30 requests/hour off-peak)
-- CPU is <1% average, memory at 39% steady
-- CPU credits are perpetually maxed at 288 (never consumed)
-- Options:
-  - **Drop to 1 instance** (min=1, desired=1) if you can tolerate brief downtime during AZ issues — saves ~$8/month
-  - **Switch to t3.nano** ($3.75/month vs $7.59/month per instance) — your workload would still fit
-  - **Consider Spot instances** for the ASG — up to 90% savings for fault-tolerant workloads
-
-#### 6. Enable HTTP/3 (QUIC) on CloudFront
-
-- Currently HTTP/2 only — HTTP/3 provides faster connections especially on mobile/poor networks
-- Single toggle in CloudFront settings, no cost
-
-### LOW Priority
-
-#### 7. Add CloudWatch Alarms for 5xx errors
-
-- Set up an alarm on `HTTPCode_Target_5XX_Count > 10` to alert you when servers are struggling
-
-#### 8. Add CloudFront Function for Bot Filtering
-
-- Lightweight edge function to block known bad user-agents before they even reach WAF
-- Free tier: 2 million invocations/month
+### LOW
+8. Rate-limit rule (2000 req/5 min) never fires; scanner waves stay below it. Could lower to ~500, but WAF managed rules + cheap 404s make this optional.
+9. Update `AWS_INFRASTRUCTURE.md` — still describes the EC2/WordPress architecture.
 
 ---
 
-## Summary: Top 3 Actions for Biggest Impact
+## Implementation Log — 2026-08-07
 
-| # | Action | Effort | Impact |
-|---|--------|--------|--------|
-| 1 | Add AWS WAF with rate limiting | 30 min | Eliminates 5xx errors, blocks ~34K daily scanner hits |
-| 2 | Enable CloudFront caching | 30 min | Reduces origin load by 60-80%, faster page loads |
-| 3 | Instance refresh to v6 | 5 min | Ensures memory scaling works correctly |
+| # | Item | Status |
+|---|------|--------|
+| 1 | Delete 3 dead EC2 alarms (High-CPU/Memory/Disk) | ✅ Done |
+| 2 | New alarms: ECS-High-CPU, ECS-High-Memory, RDS-Low-Storage (<2GB), RDS-Low-Memory (<50MB), Target-5xx-Errors (≥10/5min) — all → `bmi-calculator-alerts` SNS | ✅ Done (all OK state) |
+| 3 | CloudFront caching: behaviors `/bmi/icons/*`, `*.css`, `*.js` → CachingOptimized + AllViewer; default behavior stays CachingDisabled (dynamic PHP) | ✅ Done |
+| 4 | Logging: new S3 bucket `aazamm-bmi-logs-eu-central-1` (private, 90-day expiry) — ALB logs → `alb-logs/`, CloudFront logs → `cf-logs/` | ✅ Done |
+| 5 | HTTP/3 enabled on CloudFront | ✅ Done |
+| 6 | IAM user `aazamm_bmi_ro` + ReadOnlyAccess, CLI profile `bmi-ro` (`aws --profile bmi-ro …`) | ✅ Done |
+| 7 | RDS backup verification | ⏳ Pending |
+
+**Caveat:** with `*.js`/`*.css` cached (default TTL 24h since the origin sends no Cache-Control), a deploy that changes JS/CSS may serve stale assets for up to a day. Fix by adding a CloudFront invalidation step to CI, or by setting Cache-Control headers in the image's Apache config.
